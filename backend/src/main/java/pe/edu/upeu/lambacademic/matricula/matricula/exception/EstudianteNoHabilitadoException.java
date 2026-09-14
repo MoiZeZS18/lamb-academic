@@ -1,0 +1,12 @@
+package pe.edu.upeu.lambacademic.matricula.matricula.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+@ResponseStatus(HttpStatus.BAD_REQUEST)
+public class EstudianteNoHabilitadoException extends RuntimeException {
+
+    public EstudianteNoHabilitadoException(String mensaje) {
+        super(mensaje);
+    }
+}
