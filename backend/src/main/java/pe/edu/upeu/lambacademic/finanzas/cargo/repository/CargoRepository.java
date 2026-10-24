@@ -13,6 +13,7 @@ import pe.edu.upeu.lambacademic.finanzas.cargo.entity.EstadoCuota;
 import pe.edu.upeu.lambacademic.finanzas.cargo.entity.ProcesoOrigen;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,6 +44,9 @@ public interface CargoRepository extends JpaRepository<Cargo, Long> {
 
     @EntityGraph(attributePaths = "cuotas")
     List<Cargo> findByEstudianteIdOrderByFechaEmisionDesc(Long estudianteId);
+
+    /** Cargos de varias referencias (p. ej. una pagina de matriculas) en una sola consulta. */
+    List<Cargo> findByProcesoOrigenAndReferenciaIdIn(ProcesoOrigen procesoOrigen, Collection<Long> referenciaIds);
 
     /** Saldo consolidado del estudiante (los cargos anulados no cuentan como deuda). */
     @Query("""

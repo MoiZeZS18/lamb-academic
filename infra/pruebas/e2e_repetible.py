@@ -323,6 +323,14 @@ def escenario():
                                                                f"7 creditos, cargo {b['cargo']['montoTotal']} en 3 cuotas"))
     caso("Matricula", "Reserva de cupos aplicada", "GET", f"/api/v1/secciones/{s_r}", 200,
          verificar=lambda b, h: afirmar(b["cuposOcupados"] == 1 and cupos(s_adv) == antes_adv + 1, "R=1/1, avanzado +1"))
+    caso("Matricula", "GET de la matricula incluye su cargo (regresion cargo null)", "GET",
+         f"/api/v1/matriculas/{m_ana['id']}", 200,
+         verificar=lambda b, h: afirmar(b["cargo"] and b["cargo"]["cargoId"] == m_ana["cargo"]["cargoId"],
+                                        f"cargo {b['cargo']['cargoId'] if b['cargo'] else None}"))
+    caso("Matricula", "Listado paginado incluye el cargo de cada matricula", "GET",
+         f"/api/v1/matriculas?estudianteId={ana_id}&periodoId={activo}", 200,
+         verificar=lambda b, h: afirmar([m["cargo"]["cargoId"] for m in b["content"]] == [m_ana["cargo"]["cargoId"]],
+                                        "cargo presente en el listado"))
     matricula(ana_id, activo, [s_s], 409, "Matricula duplicada en el periodo (409)")
     matricula(beto_id, activo, [s_adv], 409, "Prerrequisito DESAPROBADO (409)")
     matricula(caro_id, activo, [s_adv], 409, "Prerrequisito nunca llevado (409)")

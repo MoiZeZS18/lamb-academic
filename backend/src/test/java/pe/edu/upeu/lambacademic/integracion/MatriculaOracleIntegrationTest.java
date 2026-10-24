@@ -121,6 +121,13 @@ class MatriculaOracleIntegrationTest {
         assertThat(cargo.cuotas()).hasSize(4);
         assertThat(cargo.cuotas().stream().map(c -> c.montoCuota()).reduce(BigDecimal.ZERO, BigDecimal::add))
                 .isEqualByComparingTo(esperado);
+
+        // Regresion: el GET y el listado devolvian "cargo": null aunque el cargo existiera.
+        int cargosAntes = fx.cargosDe(ana);
+        assertThat(matriculaService.obtener(matriculaAna).cargo().cargoId()).isEqualTo(matricula.cargo().cargoId());
+        assertThat(matriculaService.buscar(ana, periodo, null, 0, 10, "fecha", "desc").getContent())
+                .singleElement().satisfies(m -> assertThat(m.cargo().cargoId()).isEqualTo(matricula.cargo().cargoId()));
+        assertThat(fx.cargosDe(ana)).as("las consultas no generan cargos").isEqualTo(cargosAntes);
     }
 
     @Test

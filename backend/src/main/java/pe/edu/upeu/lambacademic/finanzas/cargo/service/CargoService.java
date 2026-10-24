@@ -34,11 +34,14 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 /**
  * Cargos al estudiante (origen: Frinanzas-lamb), corregido e integrado:
@@ -90,6 +93,23 @@ public class CargoService {
         log.info("Cargo {} generado para la matricula {}: total={} cuotas={}", guardado.getNumeroCargo(),
                 comando.matriculaId(), guardado.getMontoTotal(), guardado.getNumeroCuotas());
         return toGenerado(guardado, true);
+    }
+
+    /** Consulta de solo lectura: el cargo de una matricula, si existe. Nunca lo genera. */
+    @Transactional(readOnly = true)
+    public Optional<CargoGenerado> buscarCargoDeMatricula(Long matriculaId) {
+        return cargoRepository.findByProcesoOrigenAndReferenciaId(ProcesoOrigen.MATRICULA, matriculaId)
+                .map(cargo -> toGenerado(cargo, false));
+    }
+
+    /** Consulta de solo lectura en lote: matriculaId -> cargo, para listados sin N+1 consultas. */
+    @Transactional(readOnly = true)
+    public Map<Long, CargoGenerado> buscarCargosDeMatriculas(Collection<Long> matriculaIds) {
+        if (matriculaIds == null || matriculaIds.isEmpty()) {
+            return Map.of();
+        }
+        return cargoRepository.findByProcesoOrigenAndReferenciaIdIn(ProcesoOrigen.MATRICULA, matriculaIds).stream()
+                .collect(Collectors.toMap(Cargo::getReferenciaId, cargo -> toGenerado(cargo, false), (a, b) -> a));
     }
 
     /** Anula el cargo asociado a una matricula; falla si ya tiene pagos. */

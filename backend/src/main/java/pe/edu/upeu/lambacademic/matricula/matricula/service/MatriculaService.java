@@ -116,13 +116,16 @@ public class MatriculaService {
         Sort.Direction sortDirection = "asc".equalsIgnoreCase(direction) ? Sort.Direction.ASC : Sort.Direction.DESC;
         String campo = CAMPOS_ORDENABLES.contains(sortBy) ? sortBy : "fecha";
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.clamp(size, 1, 100), Sort.by(sortDirection, campo));
-        return matriculaRepository.buscar(estudianteId, periodoId, estado, pageable)
-                .map(matriculaMapper::toResponse);
+        Page<Matricula> pagina = matriculaRepository.buscar(estudianteId, periodoId, estado, pageable);
+        // Correccion: el cargo se consulta en lote en Finanzas (antes siempre salia null en el listado).
+        Map<Long, CargoFinancieroPort.CargoInfo> cargos =
+                cargoFinancieroPort.consultarCargos(pagina.map(Matricula::getId).getContent());
+        return pagina.map(m -> conCargo(matriculaMapper.toResponse(m), cargos.get(m.getId())));
     }
 
     @Transactional(readOnly = true)
     public MatriculaResponse obtener(Long id) {
-        return matriculaMapper.toResponse(buscarOFallar(id));
+        return conCargoConsultado(matriculaMapper.toResponse(buscarOFallar(id)));
     }
 
     @Transactional
@@ -337,7 +340,7 @@ public class MatriculaService {
         matricula.setFechaAnulacion(LocalDateTime.now());
         Matricula guardada = matriculaRepository.save(matricula);
         log.info("Matricula anulada id={} estudiante={}", id, matricula.getEstudianteId());
-        return matriculaMapper.toResponse(guardada);
+        return conCargoConsultado(matriculaMapper.toResponse(guardada));
     }
 
     /**
@@ -397,7 +400,7 @@ public class MatriculaService {
         Matricula guardada = matriculaRepository.save(matricula);
         log.info("Resultado registrado: matricula={} detalle={} curso={} resultado={}", matriculaId, detalleId,
                 detalle.getCursoId(), resultado);
-        return matriculaMapper.toResponse(guardada);
+        return conCargoConsultado(matriculaMapper.toResponse(guardada));
     }
 
     private void validarPrerrequisitos(Long estudianteId, Long escuelaId, Periodo periodo,
@@ -452,6 +455,15 @@ public class MatriculaService {
 
     static String claveActiva(Long estudianteId, Long periodoId) {
         return estudianteId + "-" + periodoId;
+    }
+
+    /** Agrega el cargo vigente de la matricula (consulta de solo lectura en Finanzas). */
+    private MatriculaResponse conCargoConsultado(MatriculaResponse respuesta) {
+        return conCargo(respuesta, cargoFinancieroPort.consultarCargo(respuesta.id()).orElse(null));
+    }
+
+    private static MatriculaResponse conCargo(MatriculaResponse respuesta, CargoFinancieroPort.CargoInfo cargo) {
+        return cargo == null ? respuesta : respuesta.conCargo(toCargoResponse(cargo));
     }
 
     private static CargoMatriculaResponse toCargoResponse(CargoFinancieroPort.CargoInfo cargo) {

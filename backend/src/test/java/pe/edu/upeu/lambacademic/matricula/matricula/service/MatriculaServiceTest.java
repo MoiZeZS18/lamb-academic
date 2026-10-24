@@ -98,6 +98,8 @@ class MatriculaServiceTest {
         });
         when(cargoPort.generarCargo(anyLong(), anyLong(), anyLong(), anyString(), anyInt(), anyInt()))
                 .thenReturn(new CargoFinancieroPort.CargoInfo(7L, "CRG-1", new BigDecimal("700.00"), 5, "EMITIDO"));
+        when(cargoPort.consultarCargo(anyLong())).thenReturn(Optional.empty());
+        when(cargoPort.consultarCargos(any())).thenReturn(java.util.Map.of());
         seccion(1001L, 1L, "IS101", 4, PERIODO, 10, true, horario("LUNES", 8, 10));
         seccion(1002L, 2L, "IS102", 4, PERIODO, 10, true, horario("MARTES", 8, 10));
         seccion(1003L, 3L, "IS103", 3, PERIODO, 10, true, horario("LUNES", 10, 12));
@@ -306,6 +308,52 @@ class MatriculaServiceTest {
         assertThatThrownBy(() -> service.registrar(request(), detalles(1001L, 1002L)))
                 .isInstanceOf(ReglaNegocioException.class);
         verify(cargoPort, never()).generarCargo(anyLong(), anyLong(), anyLong(), anyString(), anyInt(), anyInt());
+    }
+
+    /* --------------- Regresion: GET de matricula devolvia "cargo": null --------------- */
+
+    @Test
+    @DisplayName("Regresion: obtener() incluye el cargo existente de la matricula (antes siempre null)")
+    void obtenerIncluyeCargoExistente() {
+        when(matriculaRepository.findDetalladaById(93L)).thenReturn(Optional.of(matriculaConDetalle(93L, 7L, 1L)));
+        when(cargoPort.consultarCargo(93L)).thenReturn(Optional.of(
+                new CargoFinancieroPort.CargoInfo(7L, "CRG-7", new BigDecimal("700.00"), 5, "PAGADO_PARCIAL")));
+
+        MatriculaResponse respuesta = service.obtener(93L);
+
+        assertThat(respuesta.cargo()).isNotNull();
+        assertThat(respuesta.cargo().cargoId()).isEqualTo(7L);
+        assertThat(respuesta.cargo().montoTotal()).isEqualByComparingTo("700.00");
+        assertThat(respuesta.cargo().estado()).isEqualTo("PAGADO_PARCIAL");
+        verify(cargoPort, never()).generarCargo(anyLong(), anyLong(), anyLong(), anyString(), anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("Matricula previa a la integracion (sin cargo): cargo null, sin generar ninguno")
+    void obtenerMatriculaSinCargo() {
+        when(matriculaRepository.findDetalladaById(1L)).thenReturn(Optional.of(matriculaConDetalle(1L, 1L, null)));
+
+        assertThat(service.obtener(1L).cargo()).isNull();
+        verify(cargoPort, never()).generarCargo(anyLong(), anyLong(), anyLong(), anyString(), anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("Regresion: el listado paginado consulta los cargos en lote (una llamada) y los asigna por id")
+    void buscarIncluyeCargosEnLote() {
+        Matricula conCargo = matriculaConDetalle(93L, 7L, 1L);
+        Matricula sinCargo = matriculaConDetalle(1L, 1L, null);
+        when(matriculaRepository.buscar(any(), any(), any(), any()))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(conCargo, sinCargo)));
+        when(cargoPort.consultarCargos(List.of(93L, 1L))).thenReturn(java.util.Map.of(93L,
+                new CargoFinancieroPort.CargoInfo(7L, "CRG-7", new BigDecimal("700.00"), 5, "PAGADO_PARCIAL")));
+
+        List<MatriculaResponse> contenido = service.buscar(null, PERIODO, null, 0, 10, "fecha", "desc").getContent();
+
+        assertThat(contenido).extracting(MatriculaResponse::id).containsExactly(93L, 1L);
+        assertThat(contenido.get(0).cargo().cargoId()).isEqualTo(7L);
+        assertThat(contenido.get(1).cargo()).isNull();
+        verify(cargoPort, org.mockito.Mockito.times(1)).consultarCargos(any());
+        verify(cargoPort, never()).consultarCargo(anyLong());
     }
 
     /* ------------------------------------------------------------------ */
