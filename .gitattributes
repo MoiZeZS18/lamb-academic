@@ -1,0 +1,2 @@
+# El hook de Git debe conservar LF para ejecutarse con bash en cualquier sistema
+.githooks/* text eol=lf
