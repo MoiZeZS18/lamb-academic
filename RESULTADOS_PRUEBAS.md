@@ -3,6 +3,19 @@
 Rama `integracion/backend-unificado` · Oracle AI Database 26ai Free (`lamb-academic-oracle`,
 esquema `LAMB_APP`) · Java 21.0.12 · Spring Boot 4.0.8.
 
+## 0. Cierre de seguridad (2026-10-24, noche)
+
+| Verificación | Resultado |
+|---|---|
+| Claves nuevas / antiguas (`verificar_credenciales.py`) | `LAMB_APP`, `PDBADMIN`, `SYSTEM`, `SYS`: clave vigente **CONECTA**; clave comprometida **RECHAZADA `ORA-01017`** (antes y después de recrear el contenedor) |
+| Backend ↔ Oracle | `LambAcademicApplicationTests` 1/1 tras la rotación; arranque real en 7,8 s; `/actuator/health` `UP`, `db: UP` |
+| Suite completa (`mvnw clean package`) | **86/86** (las 83 anteriores + 3 de regresión del cargo); `ModularityTests` 3/3 |
+| Swagger / OpenAPI | `/swagger-ui.html` → 302 → `/swagger-ui/index.html` 200; 85 operaciones |
+| Pruebas HTTP repetibles | **101/101** (99 + 2 de regresión); conteos de las 19 tablas iguales al inicio |
+| Datos existentes | Huella (filas + hash de contenido de las 19 tablas, rol, cuota, 88 objetos) **idéntica** antes y después; cargos y pagos sin cambios |
+| Contenedor | `running`, 0 reinicios, volumen `lamb-academic-dev_oracle-data`, puerto solo `127.0.0.1:1522` |
+| Regresión `cargo: null` | Sin la corrección fallan `obtenerIncluyeCargoExistente` y `buscarIncluyeCargosEnLote`; con ella 26/26. En vivo: matrícula 93 → cargo 7 (700, 5 cuotas, PAGADO_PARCIAL), 94 → cargo 8; las 7 previas sin cargo |
+
 ## 1. Resumen de la auditoría final (2026-10-24, tarde)
 
 | Verificación | Ejecución | Resultado |

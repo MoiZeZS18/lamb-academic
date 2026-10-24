@@ -149,10 +149,17 @@ detalle de la malla (`DETALLE_PLAN_ESTUDIO.ID_PRERREQUISITO`).
 | Respaldos | Ambos `.dmp` con el mismo SHA-256 en host y contenedor; `impdp sqlfile` legible |
 | `origin/main` | Sin cambios (`4e5beab`); `main` local 4 commits por delante |
 
+### Cierre de seguridad (2026-10-24)
+
+Claves de `LAMB_APP`, `PDBADMIN`, `SYSTEM` y `SYS` rotadas (la del commit `4e5beab` ya no sirve);
+Oracle solo en `127.0.0.1:1522` con imagen fijada; hook de secretos activo; insumos protegidos en
+`D:\LP2`. Corregido el `cargo: null` de las consultas de matrícula. Detalle: `docs/ROTACION_CREDENCIALES.md`
+§0 y `RESULTADOS_PRUEBAS.md` §0. Sin push y sin reescribir el historial.
+
 ### Cómo reanudar
 
 1. `git switch integracion/backend-unificado`
 2. Copiar `backend/.env.example` → `backend/.env` e `infra/.env.example` → `infra/.env` con las claves.
-3. `cd backend && .\mvnw.cmd clean test` (debe dar 83/83 con Oracle levantado).
-   Con el backend levantado: `python -I infra/pruebas/e2e_repetible.py` (99/99, autolimpieza).
+3. `cd backend && .\mvnw.cmd clean test` (debe dar 86/86 con Oracle levantado).
+   Con el backend levantado: `python -I infra/pruebas/e2e_repetible.py` (101/101, autolimpieza).
 4. Revisar `PENDIENTES.md` (decisiones A1′, A3 y A4).

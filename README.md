@@ -18,9 +18,11 @@ Documentación: [ARQUITECTURA_LAMB.md](ARQUITECTURA_LAMB.md) · [MATRIZ_REQUISIT
 
 Requisitos: Java 21, Docker Desktop. Maven no es necesario (se usa `mvnw.cmd`).
 
-1. **Credenciales locales** (no se versionan):
+1. **Credenciales locales** (no se versionan; nunca las publiques):
    - copiar `infra/.env.example` a `infra/.env` y completar las claves del contenedor;
-   - copiar `backend/.env.example` a `backend/.env` y completar `LAMB_DB_PASSWORD`.
+   - copiar `backend/.env.example` a `backend/.env` y completar `LAMB_DB_PASSWORD`;
+   - activar el bloqueo de secretos en el clon: `git config core.hooksPath .githooks`.
+   Oracle solo escucha en `127.0.0.1:1522`. Rotación de claves: `docs/ROTACION_CREDENCIALES.md`.
 2. **Oracle** (si no está levantado). Nunca usar `down -v`: borra el volumen con los datos.
    ```powershell
    cd infra

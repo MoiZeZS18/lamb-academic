@@ -4,15 +4,21 @@ name: lamb-academic-dev
 # Las credenciales se leen de infra/.env (ignorado por Git). Copia infra/.env.example
 # a infra/.env y completa los valores antes del primer "docker compose up -d".
 # El volumen oracle-data conserva los datos: nunca uses "down -v" sobre este proyecto.
+# Con la base ya inicializada, ORACLE_PASSWORD y APP_USER_PASSWORD se ignoran: las claves se
+# cambian dentro de Oracle (ver docs/ROTACION_CREDENCIALES.md).
 
 services:
   oracle:
-    image: gvenzl/oracle-free:23-slim
+    # Version fijada por digest: una recreacion nunca cambia los binarios de Oracle sobre los datos.
+    image: gvenzl/oracle-free:23-slim@sha256:fbbd3023d5abc33e36d3814816e6fd740e8efabeaa70cf470ddeab5874a3f6f8
     container_name: lamb-academic-oracle
     restart: unless-stopped
+    # Tiempo para un SHUTDOWN ordenado antes de forzar la detencion.
+    stop_grace_period: 2m
 
     ports:
-      - "1522:1521"
+      # Solo este equipo (auditoria del 2026-10-24: ningun cliente de otra maquina).
+      - "127.0.0.1:1522:1521"
 
     environment:
       ORACLE_PASSWORD: ${ORACLE_PASSWORD:?Defina ORACLE_PASSWORD en infra/.env}

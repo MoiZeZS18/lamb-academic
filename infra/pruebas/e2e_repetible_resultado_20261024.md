@@ -116,3 +116,10 @@ Tercera ejecucion (tras la suite final de 83 pruebas):
 Ejecucion E2E sufijo 57258
 Total: 99 casos, 99 OK, 0 fallas
 Limpieza: conteos de las 19 tablas iguales al inicio
+
+---
+
+Ejecucion tras el cierre de seguridad (claves rotadas, correccion del cargo):
+Ejecucion E2E sufijo 62979
+Total: 101 casos, 101 OK, 0 fallas
+Limpieza: conteos de las 19 tablas iguales al inicio

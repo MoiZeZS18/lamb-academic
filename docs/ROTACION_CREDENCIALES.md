@@ -1,8 +1,27 @@
 # Seguridad de credenciales: auditoría, rotación y saneamiento del historial
 
-> Estado: **procedimiento preparado, NO ejecutado.** La rotación de claves, la activación del hook,
-> la recreación del contenedor y cualquier reescritura del historial requieren autorización explícita
-> (sección 8). Ningún valor de clave aparece en este documento.
+## 0. Ejecución (2026-10-24) — D1, D2, D3 y D6 aplicados; D4 no autorizado; D5 pospuesto
+
+| Etapa | Resultado verificado |
+|---|---|
+| Comprobaciones previas | Sin backend en 8080; 0 sesiones de `LAMB_APP`; clientes del listener: solo este equipo (`DESKTOP-39GJ1J9`) y el propio contenedor |
+| Respaldo previo | `lamb_app_pre_rotacion_*.dmp` (19 tablas, `sqlfile` legible); directorio Data Pump completo copiado a `infra/backups/contenedor-dpdump/` (SHA-256 iguales); log del listener copiado |
+| Huella de datos | `infra/oracle/verificacion/huella_datos.sql` (filas + hash de contenido de las 19 tablas, rol, cuota, objetos): **idéntica** antes de rotar, tras recrear el contenedor y al final |
+| D1 Rotación | `infra/oracle/verificacion/rotar_credenciales.py`: 4 claves distintas de 24 caracteres generadas con `secrets`, guardadas antes de aplicarse en `infra/secretos/oracle.env` (ignorado; ACL solo del usuario). `LAMB_APP` y `PDBADMIN` en `FREEPDB1`; `SYSTEM` y `SYS` en `CDB$ROOT`. Cada una: **nueva conecta, antigua `ORA-01017`** |
+| Configuración local | `backend/.env` (`LAMB_DB_PASSWORD`) e `infra/.env` (`APP_USER_PASSWORD`, `ORACLE_PASSWORD` = `SYSTEM`) actualizados; ACL solo del usuario |
+| D3 Contenedor | `compose-dev.yml`: puerto `127.0.0.1:1522`, imagen fijada por digest (la misma en ejecución, Oracle 23.26.2), `stop_grace_period: 2m`. Recreado: mismo volumen, «database already initialized», variables actualizadas, 0 reinicios. La raíz del CDB necesitó la recuperación automática de instancia (el contenedor anterior terminó por `SIGTERM`, código 143); `FREEPDB1` estaba cerrada limpiamente y la huella confirma los datos. **Próxima vez:** `SHUTDOWN IMMEDIATE` explícito antes de recrear |
+| D2 Hook | `git config core.hooksPath .githooks`: bloquea la clave vigente en un archivo preparado; deja pasar cambios legítimos |
+| D6 Insumos | `D:\LP2\.git\info\exclude` (local, no versionado): `LAMB-INTEGRACION-INSUMOS/`, `lamb-academic..zip`, `*.zip`; `git add -A --dry-run` ya no los incluye |
+| D4 | No autorizado: historial sin reescribir; la clave del commit `4e5beab` quedó **invalidada** por la rotación |
+| D5 | Pospuesto: los `verif_*.sql` se conservan (copiados al equipo antes de recrear el contenedor) |
+
+Verificación posterior: `python -I infra/oracle/verificacion/verificar_credenciales.py` (solo lectura).
+Los respaldos anteriores a la rotación contienen el verificador de la clave antigua: tras restaurar
+uno en una base nueva, volver a ejecutar `rotar_credenciales.py` (reutiliza las claves guardadas).
+
+> El resto de este documento es el procedimiento preparado antes de la ejecución.
+
+> Ningún valor de clave aparece en este documento.
 
 ## 1. Credenciales en el historial Git (auditoría del 2026-10-24)
 
