@@ -93,6 +93,41 @@ detalle de la malla (`DETALLE_PLAN_ESTUDIO.ID_PRERREQUISITO`).
 7. **Pruebas**: unitarias, `@WebMvcTest`, Modulith, integración con Oracle real (incluye rollback y concurrencia), pruebas HTTP del backend levantado.
 8. **Documentación**: arquitectura, matriz de requisitos, resultados, pendientes.
 
-## 3. Estado actual
+## 3. Estado de avance (2026-10-24)
 
-Ver la sección «Estado de avance» al final de este documento.
+| Etapa | Estado | Evidencia |
+|---|---|---|
+| A. Arquitectura unificada | Completa | `ModularityTests` 3/3, grafo acíclico |
+| B. Base Universal | Completa | institucional, persona, alumno, expediente |
+| C. Core Académico | Completa | curso, seccion, plan, docente |
+| D. Matrícula | Completa (prerrequisitos con aproximación, ver `PENDIENTES.md` A1) | 17 unitarias, 8 de integración |
+| E. Finanzas | Completa | conceptos, cargos, cuotas, pagos, saldos |
+| F. Preparación frontend | Completa | 84 operaciones en OpenAPI, CORS, `ErrorResponse` único |
+| Pruebas | 75/75 automatizadas, 46/46 HTTP | `RESULTADOS_PRUEBAS.md` |
+
+### Cambios aplicados en Oracle (esquema LAMB_APP)
+
+1. Respaldo `expdp` previo (`infra/backups/lamb_app_pre_integracion_20261024_122636.dmp`, verificado).
+2. `infra/oracle/V2__integracion_modulos.sql` aplicado: 16 tablas nuevas; columnas nuevas nullable en
+   `MATRICULAS` (`TOTAL_CREDITOS`, `CLAVE_ACTIVA`, `FECHA_ANULACION`) y `DETALLE_MATRICULA`
+   (`CURSO_ID`, `CREDITOS`); restricciones `UK_MATRICULA_ACTIVA` y `UK_DET_MATRICULA_SECCION`.
+3. `infra/oracle/V3__datos_demo.sql` aplicado: datos ficticios (sede/facultad/escuela, 5 personas,
+   3 alumnos 1001–1003, 6 cursos, malla vigente, periodo 2026-I cerrado con historial de Luis,
+   7 secciones 1001–1007, 3 conceptos de pago).
+4. Datos creados por las pruebas HTTP de demostración (persona 70000004, expediente EXP-2026-0001,
+   matrículas de Ana y Luis con sus cargos y un pago).
+5. No se ejecutó ningún `DROP`, `TRUNCATE` ni `DELETE` sobre datos previos. Las pruebas de integración
+   solo borran las filas que ellas mismas crean.
+
+### Commits en la rama `integracion/backend-unificado`
+
+- `de5a4a5` integración de módulos.
+- `56243e4` pruebas y datos de demostración.
+- Último commit: documentación final (ver `git log`).
+
+### Cómo reanudar
+
+1. `git switch integracion/backend-unificado`
+2. Copiar `backend/.env.example` → `backend/.env` e `infra/.env.example` → `infra/.env` con las claves.
+3. `cd backend && .\mvnw.cmd test` (debe dar 75/75 con Oracle levantado).
+4. Revisar `PENDIENTES.md` (decisiones A1–A7).
