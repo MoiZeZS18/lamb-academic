@@ -1,9 +1,13 @@
-# Secretos locales (copiar desde los *.example)
-infra/.env
-backend/.env
+# Secretos locales (copiar desde los *.example). Cualquier .env en cualquier carpeta.
+.env
+**/.env
+*.env
+!*.env.example
+!**/.env.example
 
-# Respaldos de Oracle (Data Pump): contienen datos reales
+# Respaldos de Oracle (Data Pump): contienen datos reales y verificadores de claves
 infra/backups/
+*.dmp
 
 # Logs del backend
 backend/logs/
