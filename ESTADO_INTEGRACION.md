@@ -134,7 +134,20 @@ detalle de la malla (`DETALLE_PLAN_ESTUDIO.ID_PRERREQUISITO`).
 - A1–A7 resueltos o documentados (`PENDIENTES.md` §A); 8 correcciones (`PENDIENTES.md` §B).
 - Oracle y Docker auditados en solo lectura: integridad 0 incoherencias, respaldos legibles.
 - Nuevos documentos: `CONTRATOS_REST.md`, `MODULOS_LAMB.md`, `docs/ROTACION_CREDENCIALES.md`.
-- **No fusionado con `main` ni publicado** (decisión del usuario).
+- **Fusionado localmente en `main` (fast-forward a `c707f36`) con autorización del usuario. No publicado** (sin push).
+
+### Fusión local en `main` (2026-10-24)
+
+| Verificación | Resultado |
+|---|---|
+| Estado previo | Árbol limpio (sin cambios ni archivos sin seguimiento fuera de los ignorados), sin stash, `main` sin commits ausentes en la rama |
+| Método | Fast-forward (`main` era ancestro de la rama): sin conflictos ni commit de fusión |
+| Respaldo de referencia | Rama local `respaldo/main-antes-fusion` → `4e5beab` (estado anterior de `main`) |
+| Archivos de `main` | 46 de 47 presentes; el único retirado es `matricula/matricula/exception/GlobalExceptionHandler.java`, cuyos 6 manejadores siguen activos vía `exception/GlobalExceptionHandler` (las excepciones de Matrícula heredan de las bases). Recuperable: `git show respaldo/main-antes-fusion:backend/src/main/java/pe/edu/upeu/lambacademic/matricula/matricula/exception/GlobalExceptionHandler.java` |
+| Desde `main` | `mvnw clean package`: BUILD SUCCESS, 83/83 pruebas, `ModularityTests` 3/3 |
+| Oracle / Docker | Contenedor `running`, 0 reinicios, mismo volumen; 19 tablas, 0 restricciones inválidas, 7 matrículas previas intactas, 0 cupos incoherentes |
+| Respaldos | Ambos `.dmp` con el mismo SHA-256 en host y contenedor; `impdp sqlfile` legible |
+| `origin/main` | Sin cambios (`4e5beab`); `main` local 4 commits por delante |
 
 ### Cómo reanudar
 
