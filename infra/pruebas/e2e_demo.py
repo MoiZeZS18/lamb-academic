@@ -1,4 +1,6 @@
-"""Pruebas HTTP de punta a punta contra el backend LAMB levantado (http://localhost:8080)."""
+"""HISTORICO (2026-10-24, primera integracion): 46 casos que CREAN datos fijos de demostracion.
+NO es repetible (una segunda ejecucion devuelve 409 donde esperaba 201). Se conserva como evidencia.
+Para volver a probar usar infra/pruebas/e2e_repetible.py (datos aislados y autolimpieza)."""
 import json
 import sys
 import urllib.error

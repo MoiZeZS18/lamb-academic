@@ -2,6 +2,8 @@ package pe.edu.upeu.lambacademic.matricula.matricula.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -12,6 +14,8 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "DETALLE_MATRICULA",
@@ -40,4 +44,12 @@ public class DetalleMatricula {
 
     @Column(name = "CREDITOS")
     private Integer creditos;
+
+    /** Resultado final del curso (V4); NULL mientras no se registre. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "RESULTADO", length = 15)
+    private ResultadoCurso resultado;
+
+    @Column(name = "FECHA_RESULTADO")
+    private LocalDateTime fechaResultado;
 }

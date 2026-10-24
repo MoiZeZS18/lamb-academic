@@ -15,10 +15,12 @@ import org.springframework.data.repository.query.Param;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaReporteResponse;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaResumenResponse;
 import pe.edu.upeu.lambacademic.matricula.matricula.entity.Matricula;
+import pe.edu.upeu.lambacademic.matricula.matricula.entity.ResultadoCurso;
 
 public interface MatriculaRepository extends JpaRepository<Matricula, Long> {
 
-    @EntityGraph(attributePaths = "detalles")
+    // Integracion: sin @EntityGraph aqui. Con JOIN FETCH de una coleccion + Pageable, Hibernate
+    // paginaba en memoria (HHH90003004); los detalles se cargan por lotes (@BatchSize).
     @Query("""
             SELECT m
             FROM Matricula m
@@ -87,8 +89,10 @@ public interface MatriculaRepository extends JpaRepository<Matricula, Long> {
     boolean existsByPeriodoId(Long periodoId);
 
     /**
-     * Cursos (de la lista dada) que el estudiante ya llevo en periodos que terminaron antes
-     * de la fecha indicada, en matriculas no anuladas. Se usa para validar prerrequisitos.
+     * Cursos (de la lista dada) que acreditan prerrequisito: llevados en matriculas no anuladas
+     * de periodos que terminaron antes de la fecha indicada y con resultado APROBADO. Si
+     * aceptarSinResultado = 1 (politica CURSADO_TEMPORAL) tambien cuentan los que aun no tienen
+     * resultado; DESAPROBADO y RETIRADO nunca cuentan.
      */
     @Query("""
             SELECT DISTINCT d.cursoId
@@ -98,8 +102,11 @@ public interface MatriculaRepository extends JpaRepository<Matricula, Long> {
               AND m.estado <> 'ANULADA'
               AND d.cursoId IN :cursoIds
               AND p.fechaFin < :antesDe
+              AND (d.resultado = :aprobado OR (:aceptarSinResultado = 1 AND d.resultado IS NULL))
             """)
-    List<Long> cursosLlevadosAntesDe(@Param("estudianteId") Long estudianteId,
-                                     @Param("cursoIds") Collection<Long> cursoIds,
-                                     @Param("antesDe") LocalDate antesDe);
+    List<Long> cursosAcreditadosAntesDe(@Param("estudianteId") Long estudianteId,
+                                        @Param("cursoIds") Collection<Long> cursoIds,
+                                        @Param("antesDe") LocalDate antesDe,
+                                        @Param("aprobado") ResultadoCurso aprobado,
+                                        @Param("aceptarSinResultado") int aceptarSinResultado);
 }

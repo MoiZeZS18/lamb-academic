@@ -32,7 +32,10 @@ import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaResponse;
 import pe.edu.upeu.lambacademic.matricula.matricula.exception.CupoInsuficienteException;
 import pe.edu.upeu.lambacademic.matricula.matricula.exception.MatriculaDuplicadaException;
 import pe.edu.upeu.lambacademic.matricula.matricula.exception.PrerrequisitoNoCumplidoException;
+import pe.edu.upeu.lambacademic.matricula.matricula.entity.ResultadoCurso;
 import pe.edu.upeu.lambacademic.matricula.matricula.service.MatriculaService;
+import pe.edu.upeu.lambacademic.matricula.periodo.dto.PeriodoRequest;
+import pe.edu.upeu.lambacademic.matricula.periodo.service.PeriodoService;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -67,6 +70,7 @@ class MatriculaOracleIntegrationTest {
     @Autowired private MatriculaService matriculaService;
     @Autowired private CargoService cargoService;
     @Autowired private ConceptoPagoService conceptoPagoService;
+    @Autowired private PeriodoService periodoService;
 
     private FixturesOracle fx;
     private Long periodo;
@@ -195,7 +199,7 @@ class MatriculaOracleIntegrationTest {
 
     @Test
     @Order(6)
-    @DisplayName("Prerrequisito de la malla vigente: sin haber llevado el curso previo, se rechaza")
+    @DisplayName("Prerrequisitos: sin curso previo se rechaza; con resultado APROBADO se admite; DESAPROBADO no")
     void prerrequisitoNoCumplido() {
         Long cursoPrevio = fx.curso(3);
         Long cursoAvanzado = fx.curso(3);
@@ -211,6 +215,33 @@ class MatriculaOracleIntegrationTest {
         assertThatThrownBy(() -> matriculaService.registrar(request(dani, null), detalles(seccionAvanzada)))
                 .isInstanceOf(PrerrequisitoNoCumplidoException.class);
         assertThat(fx.cuposOcupados(seccionAvanzada)).isZero();
+
+        // A1: solo un prerrequisito APROBADO en un periodo anterior habilita el curso avanzado.
+        Long periodoPrevio = fx.periodoPasado(periodoService);
+        Long seccionPrevia = fx.seccion(cursoPrevio, periodoPrevio, 10, 14);
+        Long eli = fx.alumno();
+        Long fer = fx.alumno();
+        MatriculaResponse matriculaEli = matriculaService.registrar(
+                new MatriculaRequest(eli, periodoPrevio, LocalDate.of(2025, 4, 1), "INICIADA", 1), detalles(seccionPrevia));
+        MatriculaResponse matriculaFer = matriculaService.registrar(
+                new MatriculaRequest(fer, periodoPrevio, LocalDate.of(2025, 4, 1), "INICIADA", 1), detalles(seccionPrevia));
+        Long detalleEli = matriculaEli.detalles().getFirst().id();
+        Long detalleFer = matriculaFer.detalles().getFirst().id();
+
+        assertThatThrownBy(() -> matriculaService.registrarResultado(matriculaEli.id(), detalleEli, ResultadoCurso.APROBADO))
+                .isInstanceOf(ReglaNegocioException.class).hasMessageContaining("periodo CERRADO");
+
+        var previo = periodoService.obtenerPorId(periodoPrevio);
+        periodoService.actualizar(periodoPrevio, new PeriodoRequest(previo.codigo(), previo.nombre(),
+                previo.fechaInicio(), previo.fechaFin(), "CERRADO"));
+        matriculaService.registrarResultado(matriculaEli.id(), detalleEli, ResultadoCurso.APROBADO);
+        matriculaService.registrarResultado(matriculaFer.id(), detalleFer, ResultadoCurso.DESAPROBADO);
+
+        assertThat(matriculaService.registrar(request(eli, 1), detalles(seccionAvanzada)).id()).isNotNull();
+        assertThatThrownBy(() -> matriculaService.registrar(request(fer, 1), detalles(seccionAvanzada)))
+                .isInstanceOf(PrerrequisitoNoCumplidoException.class)
+                .hasMessageContaining("haber aprobado antes");
+        assertThat(fx.cuposOcupados(seccionAvanzada)).isEqualTo(1);
     }
 
     private BigDecimal montoEsperado(int creditos) {

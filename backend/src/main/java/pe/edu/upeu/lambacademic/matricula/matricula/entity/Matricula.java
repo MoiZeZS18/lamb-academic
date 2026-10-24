@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Getter;
+import org.hibernate.annotations.BatchSize;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
@@ -56,6 +57,8 @@ public class Matricula {
     @Column(name = "FECHA_ANULACION")
     private LocalDateTime fechaAnulacion;
 
+    /** Lotes de carga de detalles: permite paginar en Oracle sin JOIN FETCH (integracion). */
+    @BatchSize(size = 50)
     @OneToMany(
             mappedBy = "matricula",
             cascade = CascadeType.ALL,

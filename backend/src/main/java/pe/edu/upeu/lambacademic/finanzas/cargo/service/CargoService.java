@@ -103,6 +103,12 @@ public class CargoService {
 
     @Transactional
     public CargoResponse registrarCargo(CargoRequest request) {
+        // Auditoria: un cargo manual de MATRICULA (sobre todo sin referencia) duplicaria la deuda
+        // que la matricula ya genera automaticamente en su propia transaccion.
+        if (request.procesoOrigen() == ProcesoOrigen.MATRICULA) {
+            throw new ReglaNegocioException("Los cargos de matricula se generan al registrar la matricula "
+                    + "(o con POST /api/v1/matriculas/{id}/cargo); no se registran manualmente");
+        }
         alumnoService.buscarEstudiante(request.estudianteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Estudiante", request.estudianteId()));
         PeriodoFinancieroPort.PeriodoInfo periodo = periodoPort.buscarPeriodo(request.periodoId())
@@ -113,8 +119,7 @@ public class CargoService {
                     + " con referencia " + request.referenciaId());
         }
         List<ConceptoPago> conceptos = resolverConceptos(request.conceptos());
-        String etiqueta = request.procesoOrigen() == ProcesoOrigen.MATRICULA
-                ? "Matricula " + periodo.codigo() : request.procesoOrigen().name();
+        String etiqueta = request.procesoOrigen().name() + " " + periodo.codigo();
         Cargo cargo = construirCargo(request.estudianteId(), request.procesoOrigen(), request.referenciaId(),
                 periodo.id(), request.totalCreditos(), request.numeroCuotas(), request.observacion(), conceptos,
                 etiqueta);
@@ -145,6 +150,8 @@ public class CargoService {
 
     @Transactional(readOnly = true)
     public SaldoEstudianteResponse saldoDeEstudiante(Long estudianteId) {
+        alumnoService.buscarEstudiante(estudianteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Estudiante", estudianteId));
         Object[] fila = cargoRepository.saldoDeEstudiante(estudianteId, EstadoCargo.EMITIDO,
                 EstadoCargo.PAGADO_PARCIAL, EstadoCargo.ANULADO).getFirst();
         BigDecimal deuda = (BigDecimal) fila[0];

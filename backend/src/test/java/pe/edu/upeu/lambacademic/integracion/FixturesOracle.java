@@ -1,6 +1,8 @@
 package pe.edu.upeu.lambacademic.integracion;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import pe.edu.upeu.lambacademic.matricula.periodo.dto.PeriodoRequest;
+import pe.edu.upeu.lambacademic.matricula.periodo.service.PeriodoService;
 import pe.edu.upeu.lambacademic.baseuniversal.alumno.dto.AlumnoRequest;
 import pe.edu.upeu.lambacademic.baseuniversal.alumno.service.AlumnoService;
 import pe.edu.upeu.lambacademic.baseuniversal.institucional.dto.EscuelaRequest;
@@ -43,6 +45,7 @@ public class FixturesOracle {
     private final List<Long> cursos = new ArrayList<>();
     private final List<Long> secciones = new ArrayList<>();
     private final List<Long> planes = new ArrayList<>();
+    private final List<Long> periodos = new ArrayList<>();
     private Long sedeId;
     private Long facultadId;
     private Long escuelaId;
@@ -103,6 +106,15 @@ public class FixturesOracle {
         return escuelaId;
     }
 
+    /** Periodo pasado propio de la prueba (ACTIVO al crearlo, para poder matricular en el). */
+    public Long periodoPasado(PeriodoService periodoService) {
+        contador++;
+        Long id = periodoService.crear(new PeriodoRequest("IT" + sufijo + contador, "Periodo de integracion",
+                LocalDate.of(2025, 3, 1), LocalDate.of(2025, 7, 15), "ACTIVO")).id();
+        periodos.add(id);
+        return id;
+    }
+
     public void registrarPlan(Long planId) {
         planes.add(planId);
     }
@@ -136,6 +148,7 @@ public class FixturesOracle {
             jdbc.update("DELETE FROM HORARIOS_AULA WHERE ID_SECCION = ?", seccion);
             jdbc.update("DELETE FROM SECCIONES WHERE ID = ?", seccion);
         }
+        periodos.forEach(id -> jdbc.update("DELETE FROM PERIODOS WHERE ID = ?", id));
         alumnos.forEach(id -> jdbc.update("DELETE FROM ALUMNOS WHERE ID = ?", id));
         personas.forEach(id -> jdbc.update("DELETE FROM PERSONA WHERE ID = ?", id));
         cursos.forEach(id -> jdbc.update("DELETE FROM CURSO WHERE ID = ?", id));

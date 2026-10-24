@@ -12,10 +12,13 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.mapstruct.factory.Mappers;
 import pe.edu.upeu.lambacademic.exception.ReglaNegocioException;
+import pe.edu.upeu.lambacademic.exception.ResourceNotFoundException;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.DetalleMatriculaRequest;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaRequest;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaResponse;
+import pe.edu.upeu.lambacademic.matricula.matricula.entity.DetalleMatricula;
 import pe.edu.upeu.lambacademic.matricula.matricula.entity.Matricula;
+import pe.edu.upeu.lambacademic.matricula.matricula.entity.ResultadoCurso;
 import pe.edu.upeu.lambacademic.matricula.matricula.exception.CruceHorarioException;
 import pe.edu.upeu.lambacademic.matricula.matricula.exception.CupoInsuficienteException;
 import pe.edu.upeu.lambacademic.matricula.matricula.exception.CursoDuplicadoException;
@@ -210,25 +213,88 @@ class MatriculaServiceTest {
     }
 
     @Test
-    @DisplayName("Prerrequisito no llevado en un periodo anterior: se rechaza")
-    void prerrequisitoNoCumplido() {
-        seccion(1005L, 5L, "IS201", 4, PERIODO, 10, true, horario("VIERNES", 8, 11));
-        when(prerrequisitoPort.prerrequisitosDe(5L, 1L))
-                .thenReturn(List.of(new PrerrequisitoConsultaPort.PrerrequisitoInfo(1L, "IS101")));
-        when(matriculaRepository.cursosLlevadosAntesDe(eq(ESTUDIANTE), any(), any())).thenReturn(List.of());
+    @DisplayName("Politica APROBADO: sin el prerrequisito aprobado en un periodo anterior, se rechaza")
+    void prerrequisitoNoAprobado() {
+        conPrerrequisitoIS101();
+        when(matriculaRepository.cursosAcreditadosAntesDe(eq(ESTUDIANTE), any(), any(), eq(ResultadoCurso.APROBADO), eq(0)))
+                .thenReturn(List.of());
 
         assertThatThrownBy(() -> service.registrar(request(), detalles(1005L)))
-                .isInstanceOf(PrerrequisitoNoCumplidoException.class).hasMessageContaining("IS101");
+                .isInstanceOf(PrerrequisitoNoCumplidoException.class)
+                .hasMessageContaining("haber aprobado antes IS101");
     }
 
     @Test
-    void prerrequisitoCumplido() {
-        seccion(1005L, 5L, "IS201", 4, PERIODO, 10, true, horario("VIERNES", 8, 11));
-        when(prerrequisitoPort.prerrequisitosDe(5L, 1L))
-                .thenReturn(List.of(new PrerrequisitoConsultaPort.PrerrequisitoInfo(1L, "IS101")));
-        when(matriculaRepository.cursosLlevadosAntesDe(eq(ESTUDIANTE), any(), any())).thenReturn(List.of(1L));
+    @DisplayName("Politica APROBADO: con el prerrequisito aprobado, se registra")
+    void prerrequisitoAprobado() {
+        conPrerrequisitoIS101();
+        when(matriculaRepository.cursosAcreditadosAntesDe(eq(ESTUDIANTE), any(), any(), eq(ResultadoCurso.APROBADO), eq(0)))
+                .thenReturn(List.of(1L));
 
         assertThat(service.registrar(request(), detalles(1005L)).totalCreditos()).isEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("Politica CURSADO_TEMPORAL: acepta cursos sin resultado y el mensaje la identifica")
+    void politicaTemporalIdentificada() throws Exception {
+        politica(PoliticaPrerrequisitos.CURSADO_TEMPORAL);
+        conPrerrequisitoIS101();
+        when(matriculaRepository.cursosAcreditadosAntesDe(eq(ESTUDIANTE), any(), any(), eq(ResultadoCurso.APROBADO), eq(1)))
+                .thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.registrar(request(), detalles(1005L)))
+                .isInstanceOf(PrerrequisitoNoCumplidoException.class)
+                .hasMessageContaining("CURSADO_TEMPORAL");
+    }
+
+    @Test
+    @DisplayName("Politica NINGUNA: no consulta prerrequisitos")
+    void politicaNinguna() throws Exception {
+        politica(PoliticaPrerrequisitos.NINGUNA);
+        conPrerrequisitoIS101();
+
+        assertThat(service.registrar(request(), detalles(1005L)).id()).isEqualTo(99L);
+        verify(prerrequisitoPort, never()).prerrequisitosDe(anyLong(), any());
+    }
+
+    @Test
+    @DisplayName("Resultado: solo se registra con el periodo CERRADO")
+    void resultadoConPeriodoAbiertoSeRechaza() {
+        when(matriculaRepository.findDetalladaById(50L)).thenReturn(Optional.of(matriculaConDetalle(50L, 500L, 1L)));
+
+        assertThatThrownBy(() -> service.registrarResultado(50L, 500L, ResultadoCurso.APROBADO))
+                .isInstanceOf(ReglaNegocioException.class).hasMessageContaining("periodo CERRADO");
+    }
+
+    @Test
+    @DisplayName("Resultado: un detalle previo a la integracion (sin curso) no admite resultado")
+    void resultadoEnDetalleLegadoSeRechaza() {
+        when(periodoRepository.findById(PERIODO)).thenReturn(Optional.of(periodo("CERRADO")));
+        when(matriculaRepository.findDetalladaById(1L)).thenReturn(Optional.of(matriculaConDetalle(1L, 1L, null)));
+
+        assertThatThrownBy(() -> service.registrarResultado(1L, 1L, ResultadoCurso.APROBADO))
+                .isInstanceOf(ReglaNegocioException.class).hasMessageContaining("no identifica su curso");
+    }
+
+    @Test
+    void resultadoRegistradoConPeriodoCerrado() {
+        when(periodoRepository.findById(PERIODO)).thenReturn(Optional.of(periodo("CERRADO")));
+        Matricula matricula = matriculaConDetalle(50L, 500L, 1L);
+        when(matriculaRepository.findDetalladaById(50L)).thenReturn(Optional.of(matricula));
+        when(matriculaRepository.save(any(Matricula.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        MatriculaResponse respuesta = service.registrarResultado(50L, 500L, ResultadoCurso.APROBADO);
+
+        assertThat(respuesta.detalles()).singleElement()
+                .extracting(d -> d.resultado()).isEqualTo(ResultadoCurso.APROBADO);
+        assertThat(matricula.getDetalles().getFirst().getFechaResultado()).isNotNull();
+    }
+
+    @Test
+    void resultadoDeDetalleAjenoEsNotFound() {
+        when(matriculaRepository.findDetalladaById(50L)).thenReturn(Optional.of(matriculaConDetalle(50L, 500L, 1L)));
+        assertThatThrownBy(() -> service.registrarResultado(50L, 999L, ResultadoCurso.APROBADO))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
@@ -243,6 +309,34 @@ class MatriculaServiceTest {
     }
 
     /* ------------------------------------------------------------------ */
+
+    private void conPrerrequisitoIS101() {
+        seccion(1005L, 5L, "IS201", 4, PERIODO, 10, true, horario("VIERNES", 8, 11));
+        when(prerrequisitoPort.prerrequisitosDe(5L, 1L))
+                .thenReturn(List.of(new PrerrequisitoConsultaPort.PrerrequisitoInfo(1L, "IS101")));
+    }
+
+    private void politica(PoliticaPrerrequisitos politica) throws Exception {
+        Field campo = MatriculaService.class.getDeclaredField("politicaPrerrequisitos");
+        campo.setAccessible(true);
+        campo.set(service, politica);
+    }
+
+    private static Matricula matriculaConDetalle(Long matriculaId, Long detalleId, Long cursoId) {
+        Matricula m = new Matricula();
+        m.setId(matriculaId);
+        m.setEstudianteId(ESTUDIANTE);
+        m.setPeriodoId(PERIODO);
+        m.setFecha(FECHA);
+        m.setEstado("INICIADA");
+        DetalleMatricula d = new DetalleMatricula();
+        d.setId(detalleId);
+        d.setSeccionId(1001L);
+        d.setCursoId(cursoId);
+        d.setMatricula(m);
+        m.getDetalles().add(d);
+        return m;
+    }
 
     private static MatriculaRequest request() {
         return new MatriculaRequest(ESTUDIANTE, PERIODO, FECHA, "INICIADA", null);

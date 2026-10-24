@@ -100,10 +100,10 @@ detalle de la malla (`DETALLE_PLAN_ESTUDIO.ID_PRERREQUISITO`).
 | A. Arquitectura unificada | Completa | `ModularityTests` 3/3, grafo acíclico |
 | B. Base Universal | Completa | institucional, persona, alumno, expediente |
 | C. Core Académico | Completa | curso, seccion, plan, docente |
-| D. Matrícula | Completa (prerrequisitos con aproximación, ver `PENDIENTES.md` A1) | 17 unitarias, 8 de integración |
+| D. Matrícula | Completa (prerrequisitos con resultado APROBADO, V4) | 23 unitarias, 8 de integración |
 | E. Finanzas | Completa | conceptos, cargos, cuotas, pagos, saldos |
 | F. Preparación frontend | Completa | 84 operaciones en OpenAPI, CORS, `ErrorResponse` único |
-| Pruebas | 75/75 automatizadas, 46/46 HTTP | `RESULTADOS_PRUEBAS.md` |
+| Pruebas | 83/83 automatizadas, 99/99 HTTP repetibles (×2) | `RESULTADOS_PRUEBAS.md` |
 
 ### Cambios aplicados en Oracle (esquema LAMB_APP)
 
@@ -116,8 +116,11 @@ detalle de la malla (`DETALLE_PLAN_ESTUDIO.ID_PRERREQUISITO`).
    7 secciones 1001–1007, 3 conceptos de pago).
 4. Datos creados por las pruebas HTTP de demostración (persona 70000004, expediente EXP-2026-0001,
    matrículas de Ana y Luis con sus cargos y un pago).
-5. No se ejecutó ningún `DROP`, `TRUNCATE` ni `DELETE` sobre datos previos. Las pruebas de integración
-   solo borran las filas que ellas mismas crean.
+5. Segundo respaldo `infra/backups/lamb_app_pre_v4_20261024_132510.dmp` (verificado) y
+   `infra/oracle/V4__resultado_detalle_matricula.sql` aplicado: `DETALLE_MATRICULA.RESULTADO` y
+   `FECHA_RESULTADO` (NULL en filas existentes) + 2 CHECK.
+6. No se ejecutó ningún `DROP`, `TRUNCATE` ni `DELETE` sobre datos previos. Las pruebas de integración
+   y las HTTP repetibles solo borran las filas que ellas mismas crean (verificado por conteo).
 
 ### Commits en la rama `integracion/backend-unificado`
 
@@ -125,9 +128,18 @@ detalle de la malla (`DETALLE_PLAN_ESTUDIO.ID_PRERREQUISITO`).
 - `56243e4` pruebas y datos de demostración.
 - Último commit: documentación final (ver `git log`).
 
+### Auditoría técnica final (2026-10-24)
+
+- Diff completo contra `main` revisado: la Matrícula original se conserva (ver `MODULOS_LAMB.md` §1).
+- A1–A7 resueltos o documentados (`PENDIENTES.md` §A); 8 correcciones (`PENDIENTES.md` §B).
+- Oracle y Docker auditados en solo lectura: integridad 0 incoherencias, respaldos legibles.
+- Nuevos documentos: `CONTRATOS_REST.md`, `MODULOS_LAMB.md`, `docs/ROTACION_CREDENCIALES.md`.
+- **No fusionado con `main` ni publicado** (decisión del usuario).
+
 ### Cómo reanudar
 
 1. `git switch integracion/backend-unificado`
 2. Copiar `backend/.env.example` → `backend/.env` e `infra/.env.example` → `infra/.env` con las claves.
-3. `cd backend && .\mvnw.cmd test` (debe dar 75/75 con Oracle levantado).
-4. Revisar `PENDIENTES.md` (decisiones A1–A7).
+3. `cd backend && .\mvnw.cmd clean test` (debe dar 83/83 con Oracle levantado).
+   Con el backend levantado: `python -I infra/pruebas/e2e_repetible.py` (99/99, autolimpieza).
+4. Revisar `PENDIENTES.md` (decisiones A1′, A3 y A4).

@@ -63,7 +63,7 @@ siguen siendo el contrato del servicio; sus adaptadores pasaron de simulados a r
 |---|---|---|
 | Base Universal | `SEDE` → `FACULTAD` → `ESCUELA`; `PERSONA` (→ESCUELA); `ALUMNOS` (1:1 PERSONA); `EXPEDIENTES` (→PERSONA) → `DOCUMENTOS_ADJUNTOS` | FK físicas dentro del módulo |
 | Core Académico | `CURSO`; `PLAN_ESTUDIO` → `DETALLE_PLAN_ESTUDIO` (→CURSO, prerrequisito →CURSO); `SECCIONES` (→CURSO, →PERIODOS, →PERSONA docente) → `HORARIOS_AULA` | FK físicas; en Java, ids `Long` hacia otros módulos |
-| Matrícula | `PERIODOS`; `MATRICULAS` → `DETALLE_MATRICULA` | Sin FK hacia ALUMNOS/SECCIONES (registro histórico, criterio S4 Tabla 2) |
+| Matrícula | `PERIODOS`; `MATRICULAS` → `DETALLE_MATRICULA` (con `RESULTADO` del curso, V4) | Sin FK hacia ALUMNOS/SECCIONES (registro histórico, criterio S4 Tabla 2) |
 | Finanzas | `FIN_CONCEPTOS_PAGO`; `FIN_CARGOS` → `FIN_DETALLE_CARGOS`, `FIN_PAGOS` | Sin FK hacia estudiante/periodo/matrícula (documento histórico) |
 
 Restricciones relevantes: `UK_MATRICULA_ACTIVA (CLAVE_ACTIVA)` (una matrícula activa por estudiante y
@@ -77,7 +77,7 @@ que ya existían en `MATRICULAS`/`DETALLE_MATRICULA`.
 
 | Operación | Cabecera / detalle | Reglas | Transacción |
 |---|---|---|---|
-| `POST /api/v1/matriculas` | Matrícula / DetalleMatrícula | periodo existente, ACTIVO y fecha dentro; estudiante existente y habilitado; una matrícula activa por periodo; sección existente, del periodo, abierta, con cupo; sin sección ni curso repetido; prerrequisitos; sin cruce de horarios | Una sola `@Transactional`: INSERT cabecera+detalles → `UPDATE` atómico de cupos (orden ascendente) → cargo financiero. Cualquier excepción revierte todo. |
+| `POST /api/v1/matriculas` | Matrícula / DetalleMatrícula | periodo existente, ACTIVO y fecha dentro; estudiante existente y habilitado; una matrícula activa por periodo; sección existente, del periodo, abierta, con cupo; sin sección ni curso repetido; prerrequisitos **aprobados** en un periodo anterior; sin cruce de horarios | Una sola `@Transactional`: INSERT cabecera+detalles → `UPDATE` atómico de cupos (orden ascendente) → cargo financiero. Cualquier excepción revierte todo. |
 | `POST /api/v1/planes-estudio` | PlanEstudio / DetallePlanEstudio | curso no repetido, 6–24 créditos por ciclo, prerrequisito del mismo plan y ciclo anterior, electivo no es prerrequisito | `@Transactional` |
 | `POST /api/v1/secciones` | Sección / HorarioAula | curso activo, periodo no cerrado, docente válido, grupo único, franja 07:00–22:00, sin cruces internos, de aula ni de docente | `@Transactional` |
 | `POST /api/v1/expedientes` | Expediente / DocumentoAdjunto | persona activa, código único, extensión coherente con el tipo, archivo no repetido, 1–20 documentos | `@Transactional` |
@@ -100,6 +100,9 @@ filas si el cupo se agotó → `ReglaNegocioException` → rollback. Probado con
   y exponiendo `X-Trace-ID`.
 - Filtros combinados con `(:param IS NULL OR …)` en una sola consulta, `Sort` con lista blanca de
   campos, proyecciones con `SELECT new …` y agregaciones (`/resumen`, `/reporte`).
+- Paginación (`GET /api/v1/matriculas`) en Oracle (sin `JOIN FETCH` de colección; `@BatchSize`) y JSON
+  estable `{content, page{size, number, totalElements, totalPages}}` (`PaginacionConfig`, `VIA_DTO`).
+- Contratos que cambiaron respecto a cada aporte: `CONTRATOS_REST.md`.
 
 ## 6. Configuración y secretos
 
@@ -110,7 +113,7 @@ ambos ignorados por Git (plantillas `*.env.example`). Propiedades propias:
 | Propiedad | Valor DEV | Uso |
 |---|---|---|
 | `lamb.cors.allowed-origins` | `http://localhost:4200` | Orígenes del frontend |
-| `lamb.matricula.validar-prerrequisitos` | `true` | Activa la regla de prerrequisitos |
+| `lamb.matricula.prerrequisitos.politica` | `APROBADO` | `APROBADO` (exige resultado APROBADO), `CURSADO_TEMPORAL` (transición, identificada en el mensaje) o `NINGUNA` |
 | `lamb.matricula.cuotas-por-defecto` | `5` | Cuotas del cargo si la solicitud no las indica |
 
 ## 7. Decisiones registradas
@@ -124,3 +127,5 @@ ambos ignorados por Git (plantillas `*.env.example`). Propiedades propias:
 7. JWT de LP2_L pospuesto a U2 (S10 según las guías).
 8. `Boolean` mapeado a `NUMBER(1)` con convertidor: Oracle 23ai espera `BOOLEAN` nativo y la
    validación fallaba (el código de LP2_G1 no habría arrancado con `validate`).
+9. Prerrequisitos: un curso solo acredita si su detalle de matrícula tiene resultado APROBADO
+   (registrado con el periodo CERRADO). No hay módulo de notas: se guarda solo el resultado final.

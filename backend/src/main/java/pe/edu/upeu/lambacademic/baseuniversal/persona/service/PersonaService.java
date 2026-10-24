@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pe.edu.upeu.lambacademic.baseuniversal.alumno.repository.AlumnoRepository;
 import pe.edu.upeu.lambacademic.baseuniversal.institucional.entity.Escuela;
 import pe.edu.upeu.lambacademic.baseuniversal.institucional.repository.EscuelaRepository;
 import pe.edu.upeu.lambacademic.baseuniversal.persona.dto.ConteoResponse;
@@ -33,6 +34,7 @@ public class PersonaService {
 
     private final PersonaRepository repository;
     private final EscuelaRepository escuelaRepository;
+    private final AlumnoRepository alumnoRepository;
     private final PersonaMapper mapper;
 
     @Transactional(readOnly = true)
@@ -99,6 +101,10 @@ public class PersonaService {
         if (repository.existsByTipoDocumentoAndNumeroDocumentoAndIdNot(
                 request.tipoDocumento(), request.numeroDocumento(), id)) {
             throw new ReglaNegocioException("El documento ya pertenece a otra persona");
+        }
+        if (persona.getTipoPersona() != request.tipoPersona() && alumnoRepository.existsByPersonaId(id)) {
+            throw new ReglaNegocioException("La persona " + id + " esta registrada como alumno; no puede cambiar su tipo a "
+                    + request.tipoPersona());
         }
         mapper.actualizar(persona, request);
         persona.setEscuela(escuelaDe(request.idEscuela()));

@@ -30,9 +30,9 @@ necesaria para unir los módulos (no es requisito del docente); **Usuario** = pe
 | D20 | Filtros combinados `(:param IS NULL OR …)`, ordenamiento `Sort` | S5 2.2–2.3 | repositorios `buscar(...)` | E2E #10, #17, #22, #34 | Cumple |
 | D21 | Proyecciones y agregaciones (`/resumen`) | S5 2.4–2.5 | `ExpedienteResumen`, `CargoResumenResponse`, `*Reporte` | E2E #16, #35, #36, #44 | Cumple |
 | D22 | CORS configurable por propiedad, sin `*`, varios orígenes | S5 3.7 | `CorsConfig`, `lamb.cors.allowed-origins` | `CorsConfigTest`; E2E #45–46 | Cumple |
-| D23 | Pruebas automatizadas (incluye controller con `@WebMvcTest`) | S2 3.9 | `src/test/**` | 75 pruebas | Cumple |
+| D23 | Pruebas automatizadas (incluye controller con `@WebMvcTest`) | S2 3.9 | `src/test/**` | 83 pruebas | Cumple |
 | D24 | Persistencia real en Oracle (esquema de la BD del equipo) | S1, S6 | esquema `LAMB_APP` | integración + E2E | Cumple |
-| D25 | Producto `lp2-demo.md` (plantilla del docente) | S6 tabla 4 | — | — | **Pendiente** (la plantilla no está en el material recibido; ver `PENDIENTES.md`) |
+| D25 | Producto `lp2-demo.md` (plantilla del docente) | S6 tabla 4 | — | — | **Pendiente académico** (no bloquea la integración; la plantilla no está en el material recibido) |
 
 ## 2. Requisitos de la misión por módulo
 
@@ -43,13 +43,13 @@ necesaria para unir los módulos (no es requisito del docente); **Usuario** = pe
 | U3 | Matrícula consulta estudiantes reales | Usuario | `EstudianteConsultaAdapter` → `AlumnoService` | integración | Cumple |
 | U4 | Periodo, Matrícula, DetalleMatrícula, registro transaccional (preservado) | Usuario | `matricula.*` | unitarias + integración | Cumple |
 | U5 | Cupos, cruces de horario, validación de estudiante y sección, duplicados | Usuario | `MatriculaService` | 17 unitarias + E2E | Cumple |
-| U6 | Prerrequisitos aplicables | Usuario | `PrerrequisitoConsultaAdapter` + `cursosLlevadosAntesDe` | unitaria + integración + E2E #27–28 | **Parcial**: se usa «llevado en un periodo anterior» porque no existe módulo de notas |
+| U6 | Prerrequisitos aplicables (aprobado ≠ cursado) | Usuario | `PrerrequisitoConsultaAdapter` + `cursosAcreditadosAntesDe` + resultado por curso (V4) | 4 unitarias de política + integración Oracle + E2E | **Cumple** (sin notas ni actas: solo resultado final; ver `PENDIENTES.md` A1) |
 | U7 | Concurrencia al reservar cupos | Usuario | UPDATE atómico + orden ascendente | `soloUnoObtieneElUltimoCupo` (2 hilos, Oracle) | Cumple |
 | U8 | ConceptoPago, Cargo, DetalleCuota (DetalleCargo), deuda, cuotas, saldos | Usuario | `finanzas.*` | unitarias + E2E #37–44 | Cumple |
 | U9 | Integración Matrícula → cargo; sin duplicados ni errores de redondeo; recuperación | Usuario | misma transacción; `UX_FIN_CARGOS_ORIGEN`; `POST /matriculas/{id}/cargo` | `CalculadoraCargoTest`, E2E #42 | Cumple |
 | U10 | Curso, Sección, HorarioAula, programación, cupos, aulas | Usuario | `coreacademico.curso/seccion` | `SeccionServiceTest`, E2E #20–23 | Cumple |
 | U11 | PlanEstudio, Prerrequisito, Docente | Usuario | `coreacademico.plan/docente` | `PlanEstudioServiceTest`, E2E #18–19, #23 | Cumple (Docente como Persona `DOCENTE`) |
-| U12 | Endpoints listos y documentados para el frontend | Usuario | 84 operaciones en OpenAPI | E2E | Cumple |
+| U12 | Endpoints listos y documentados para el frontend | Usuario | 85 operaciones en OpenAPI; cambios en `CONTRATOS_REST.md` | E2E | Cumple |
 | U13 | No usar `ddl-auto=update`; scripts revisados y reversibles | Usuario | `infra/oracle/V2*`, `V3*` | aplicados con respaldo | Cumple |
 
 ## 3. Mejoras técnicas de integración (no exigidas por el docente)
@@ -64,3 +64,6 @@ necesaria para unir los módulos (no es requisito del docente); **Usuario** = pe
 | I6 | Pagos (`FIN_PAGOS`) | Saldo con significado real y anulación segura |
 | I7 | Cruce de aula y de docente al programar secciones | Coherencia de la oferta |
 | I8 | Anulación de matrícula (libera cupos, anula cargo) | Consistencia y recuperación |
+| I9 | Paginación en Oracle + JSON de página estable (`VIA_DTO`) | Rendimiento y contrato para el frontend |
+| I10 | Cargo manual de MATRICULA rechazado | Evitar deuda duplicada |
+| I11 | Pruebas HTTP repetibles con autolimpieza | No alterar datos reales |

@@ -16,6 +16,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        jdbc:
+          fetch_size: 100
     show-sql: false
 
   devtools:
@@ -46,8 +48,10 @@ lamb:
     # Lista separada por comas. Nunca "*" (ver S5 3.7).
     allowed-origins: http://localhost:4200
   matricula:
-    # Prerrequisitos: se consideran cumplidos si el curso se llevo en un periodo anterior
-    # (no existe todavia un modulo de notas; ver PENDIENTES.md).
-    validar-prerrequisitos: true
+    # Prerrequisitos (PENDIENTES A1): APROBADO exige resultado APROBADO registrado en un
+    # periodo anterior. CURSADO_TEMPORAL acepta cursos sin resultado (solo transicion).
+    # NINGUNA desactiva la regla.
+    prerrequisitos:
+      politica: APROBADO
     # Cuotas por defecto del cargo de matricula cuando la solicitud no las indica.
     cuotas-por-defecto: 5

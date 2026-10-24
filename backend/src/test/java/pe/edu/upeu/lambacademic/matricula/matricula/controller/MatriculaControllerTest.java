@@ -42,7 +42,7 @@ class MatriculaControllerTest {
     void registrarValidaRespondeCreatedConCargoYTraceId() throws Exception {
         when(matriculaService.registrar(any(), any())).thenReturn(new MatriculaResponse(99L, 1001L, 4L,
                 LocalDate.of(2026, 10, 24), "INICIADA",
-                List.of(new DetalleMatriculaResponse(1L, 1001L, 1L, 4), new DetalleMatriculaResponse(2L, 1002L, 2L, 4)),
+                List.of(new DetalleMatriculaResponse(1L, 1001L, 1L, 4, null), new DetalleMatriculaResponse(2L, 1002L, 2L, 4, null)),
                 8, new CargoMatriculaResponse(7L, "CRG-1", new BigDecimal("550.00"), 5, "EMITIDO")));
 
         mockMvc.perform(post("/api/v1/matriculas").contentType(MediaType.APPLICATION_JSON).content(VALIDA)

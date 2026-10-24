@@ -14,6 +14,7 @@ import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaResponse;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaRegistroRequest;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaReporteResponse;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaResumenResponse;
+import pe.edu.upeu.lambacademic.matricula.matricula.dto.ResultadoCursoRequest;
 import pe.edu.upeu.lambacademic.matricula.matricula.service.MatriculaService;
 
 
@@ -83,6 +84,15 @@ public class MatriculaController {
     @PatchMapping("/{id}/anular")
     public MatriculaResponse anular(@PathVariable Long id) {
         return matriculaService.anular(id);
+    }
+
+    @Operation(summary = "Registra el resultado final (APROBADO, DESAPROBADO, RETIRADO) de un curso; periodo CERRADO")
+    @PatchMapping("/{id}/detalles/{detalleId}/resultado")
+    public MatriculaResponse registrarResultado(
+            @PathVariable Long id,
+            @PathVariable Long detalleId,
+            @Valid @RequestBody ResultadoCursoRequest request) {
+        return matriculaService.registrarResultado(id, detalleId, request.resultado());
     }
 
     @Operation(summary = "Genera (idempotente) el cargo financiero de una matricula que no lo tenga")

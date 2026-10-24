@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import pe.edu.upeu.lambacademic.exception.ReglaNegocioException;
+import pe.edu.upeu.lambacademic.exception.ResourceNotFoundException;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.CargoMatriculaResponse;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.DetalleMatriculaRequest;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaReporteResponse;
@@ -21,6 +22,7 @@ import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaResponse;
 
 import pe.edu.upeu.lambacademic.matricula.matricula.entity.DetalleMatricula;
 import pe.edu.upeu.lambacademic.matricula.matricula.entity.Matricula;
+import pe.edu.upeu.lambacademic.matricula.matricula.entity.ResultadoCurso;
 
 import pe.edu.upeu.lambacademic.matricula.matricula.exception.CruceHorarioException;
 import pe.edu.upeu.lambacademic.matricula.matricula.exception.CupoInsuficienteException;
@@ -82,8 +84,9 @@ public class MatriculaService {
     private final PrerrequisitoConsultaPort prerrequisitoConsultaPort;
     private final CargoFinancieroPort cargoFinancieroPort;
 
-    @Value("${lamb.matricula.validar-prerrequisitos:true}")
-    private boolean validarPrerrequisitos = true;
+    /** APROBADO por defecto; CURSADO_TEMPORAL solo como transicion (ver PENDIENTES A1). */
+    @Value("${lamb.matricula.prerrequisitos.politica:APROBADO}")
+    private PoliticaPrerrequisitos politicaPrerrequisitos = PoliticaPrerrequisitos.APROBADO;
 
     @Value("${lamb.matricula.cuotas-por-defecto:5}")
     private int cuotasPorDefecto = 5;
@@ -226,7 +229,7 @@ public class MatriculaService {
         }
 
         // [integracion] prerrequisitos segun la malla vigente de la escuela del estudiante
-        if (validarPrerrequisitos) {
+        if (politicaPrerrequisitos != PoliticaPrerrequisitos.NINGUNA) {
             validarPrerrequisitos(request.estudianteId(), estudiante.escuelaId(), periodo,
                     seccionesValidadas.values(), cursosRegistrados);
         }
@@ -359,6 +362,44 @@ public class MatriculaService {
         return matriculaMapper.toResponse(matricula).conCargo(toCargoResponse(cargo));
     }
 
+    /**
+     * [integracion, A1] Registra el resultado final de un curso de la matricula. Solo se admite
+     * cuando el periodo esta CERRADO (el curso termino) y el detalle tiene curso identificado
+     * (las matriculas previas a la integracion no lo tienen). Permite corregir un resultado.
+     */
+    @Transactional
+    public MatriculaResponse registrarResultado(Long matriculaId, Long detalleId, ResultadoCurso resultado) {
+        Matricula matricula = buscarOFallar(matriculaId);
+        if (ESTADO_ANULADA.equalsIgnoreCase(matricula.getEstado())) {
+            throw new ReglaNegocioException("La matricula " + matriculaId + " esta anulada");
+        }
+        DetalleMatricula detalle = matricula.getDetalles().stream()
+                .filter(d -> d.getId().equals(detalleId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "El detalle " + detalleId + " no pertenece a la matricula " + matriculaId));
+        if (detalle.getCursoId() == null) {
+            throw new ReglaNegocioException("El detalle " + detalleId
+                    + " no identifica su curso (matricula anterior a la integracion)");
+        }
+        Periodo periodo = periodoRepository.findById(matricula.getPeriodoId())
+                .orElseThrow(() -> new PeriodoNoEncontradoException("El periodo " + matricula.getPeriodoId() + " no existe"));
+        if (!"CERRADO".equalsIgnoreCase(periodo.getEstado())) {
+            throw new ReglaNegocioException("El resultado solo se registra con el periodo CERRADO; el periodo "
+                    + periodo.getCodigo() + " esta " + periodo.getEstado());
+        }
+        if (detalle.getResultado() != null && detalle.getResultado() != resultado) {
+            log.info("Correccion de resultado: matricula={} detalle={} {} -> {}", matriculaId, detalleId,
+                    detalle.getResultado(), resultado);
+        }
+        detalle.setResultado(resultado);
+        detalle.setFechaResultado(LocalDateTime.now());
+        Matricula guardada = matriculaRepository.save(matricula);
+        log.info("Resultado registrado: matricula={} detalle={} curso={} resultado={}", matriculaId, detalleId,
+                detalle.getCursoId(), resultado);
+        return matriculaMapper.toResponse(guardada);
+    }
+
     private void validarPrerrequisitos(Long estudianteId, Long escuelaId, Periodo periodo,
                                        Iterable<SeccionConsultaPort.SeccionInfo> secciones,
                                        Set<Long> cursosDeEstaMatricula) {
@@ -369,14 +410,18 @@ public class MatriculaService {
                 continue;
             }
             List<Long> ids = prerrequisitos.stream().map(PrerrequisitoConsultaPort.PrerrequisitoInfo::cursoId).toList();
-            Set<Long> llevados = new HashSet<>(
-                    matriculaRepository.cursosLlevadosAntesDe(estudianteId, ids, periodo.getFechaInicio()));
+            boolean temporal = politicaPrerrequisitos == PoliticaPrerrequisitos.CURSADO_TEMPORAL;
+            Set<Long> acreditados = new HashSet<>(matriculaRepository.cursosAcreditadosAntesDe(
+                    estudianteId, ids, periodo.getFechaInicio(), ResultadoCurso.APROBADO, temporal ? 1 : 0));
             for (PrerrequisitoConsultaPort.PrerrequisitoInfo prerrequisito : prerrequisitos) {
-                if (!llevados.contains(prerrequisito.cursoId())) {
+                if (!acreditados.contains(prerrequisito.cursoId())) {
                     String detalle = cursosDeEstaMatricula.contains(prerrequisito.cursoId())
                             ? " (no puede llevarse en el mismo periodo)" : "";
+                    String exigencia = temporal
+                            ? "haber llevado antes (politica temporal CURSADO_TEMPORAL) "
+                            : "haber aprobado antes ";
                     throw new PrerrequisitoNoCumplidoException("Para matricularse en " + seccion.cursoCodigo()
-                            + " debe haber llevado antes " + prerrequisito.codigo() + detalle);
+                            + " debe " + exigencia + prerrequisito.codigo() + detalle);
                 }
             }
         }

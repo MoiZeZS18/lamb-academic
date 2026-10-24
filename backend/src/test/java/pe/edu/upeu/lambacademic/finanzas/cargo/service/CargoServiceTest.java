@@ -13,8 +13,10 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import pe.edu.upeu.lambacademic.baseuniversal.alumno.service.AlumnoService;
 import pe.edu.upeu.lambacademic.exception.ReglaNegocioException;
+import pe.edu.upeu.lambacademic.exception.ResourceNotFoundException;
 import pe.edu.upeu.lambacademic.finanzas.cargo.dto.CargoGenerado;
 import pe.edu.upeu.lambacademic.finanzas.cargo.dto.CargoMatriculaCommand;
+import pe.edu.upeu.lambacademic.finanzas.cargo.dto.CargoRequest;
 import pe.edu.upeu.lambacademic.finanzas.cargo.dto.CargoResponse;
 import pe.edu.upeu.lambacademic.finanzas.cargo.dto.PagoRequest;
 import pe.edu.upeu.lambacademic.finanzas.cargo.entity.Cargo;
@@ -132,6 +134,22 @@ class CargoServiceTest {
         assertThat(respuesta.estado()).isEqualTo(EstadoCargo.ANULADO);
         assertThat(respuesta.saldoPendiente()).isEqualByComparingTo("0.00");
         assertThat(cargo.getCuotas()).allSatisfy(c -> assertThat(c.getEstado()).isEqualTo(EstadoCuota.ANULADA));
+    }
+
+    @Test
+    @DisplayName("Un cargo manual de MATRICULA se rechaza: duplicaria la deuda que genera la matricula")
+    void cargoManualDeMatriculaSeRechaza() {
+        assertThatThrownBy(() -> service.registrarCargo(new CargoRequest(
+                1001L, ProcesoOrigen.MATRICULA, null, 4L, 11, 5, null, null)))
+                .isInstanceOf(ReglaNegocioException.class).hasMessageContaining("se generan al registrar la matricula");
+        verify(cargoRepository, never()).save(any());
+    }
+
+    @Test
+    void saldoDeEstudianteInexistenteEsNotFound() {
+        when(alumnoService.buscarEstudiante(9999L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.saldoDeEstudiante(9999L))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     private static Cargo cargo(String total, String saldo) {
