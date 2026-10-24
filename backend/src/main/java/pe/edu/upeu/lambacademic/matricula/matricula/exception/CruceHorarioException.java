@@ -1,6 +1,9 @@
 package pe.edu.upeu.lambacademic.matricula.matricula.exception;
 
-public class CruceHorarioException extends RuntimeException {
+import pe.edu.upeu.lambacademic.exception.ReglaNegocioException;
+
+/** Responde 409 a traves del manejador global (pe.edu.upeu.lambacademic.exception). */
+public class CruceHorarioException extends ReglaNegocioException {
 
     public CruceHorarioException(String mensaje) {
         super(mensaje);

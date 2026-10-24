@@ -9,6 +9,12 @@ public record MatriculaResponse(
         Long periodoId,
         LocalDate fecha,
         String estado,
-        List<DetalleMatriculaResponse> detalles
+        List<DetalleMatriculaResponse> detalles,
+        Integer totalCreditos,
+        CargoMatriculaResponse cargo
 ) {
+
+    public MatriculaResponse conCargo(CargoMatriculaResponse nuevoCargo) {
+        return new MatriculaResponse(id, estudianteId, periodoId, fecha, estado, detalles, totalCreditos, nuevoCargo);
+    }
 }

@@ -3,19 +3,20 @@ server:
 
 spring:
   datasource:
-    url: jdbc:oracle:thin:@localhost:1522/FREEPDB1
-    username: LAMB_APP
-    password: 123456
+    url: ${LAMB_DB_URL:jdbc:oracle:thin:@localhost:1522/FREEPDB1}
+    username: ${LAMB_DB_USERNAME:LAMB_APP}
+    password: ${LAMB_DB_PASSWORD}
     driver-class-name: oracle.jdbc.OracleDriver
 
   jpa:
     open-in-view: false
     hibernate:
+      # El esquema lo crean los scripts revisados de infra/oracle (no Hibernate).
       ddl-auto: validate
     properties:
       hibernate:
         format_sql: true
-        show_sql: true
+    show-sql: false
 
   devtools:
     restart:
@@ -35,7 +36,18 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,modulith
   endpoint:
     health:
       show-details: always
+
+lamb:
+  cors:
+    # Lista separada por comas. Nunca "*" (ver S5 3.7).
+    allowed-origins: http://localhost:4200
+  matricula:
+    # Prerrequisitos: se consideran cumplidos si el curso se llevo en un periodo anterior
+    # (no existe todavia un modulo de notas; ver PENDIENTES.md).
+    validar-prerrequisitos: true
+    # Cuotas por defecto del cargo de matricula cuando la solicitud no las indica.
+    cuotas-por-defecto: 5

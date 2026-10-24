@@ -1,0 +1,26 @@
+name: lamb-academic-dev
+
+# Oracle para el ambiente DEV de LAMB Academic.
+# Las credenciales se leen de infra/.env (ignorado por Git). Copia infra/.env.example
+# a infra/.env y completa los valores antes del primer "docker compose up -d".
+# El volumen oracle-data conserva los datos: nunca uses "down -v" sobre este proyecto.
+
+services:
+  oracle:
+    image: gvenzl/oracle-free:23-slim
+    container_name: lamb-academic-oracle
+    restart: unless-stopped
+
+    ports:
+      - "1522:1521"
+
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:?Defina ORACLE_PASSWORD en infra/.env}
+      APP_USER: ${APP_USER:-LAMB_APP}
+      APP_USER_PASSWORD: ${APP_USER_PASSWORD:?Defina APP_USER_PASSWORD en infra/.env}
+
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+
+volumes:
+  oracle-data:

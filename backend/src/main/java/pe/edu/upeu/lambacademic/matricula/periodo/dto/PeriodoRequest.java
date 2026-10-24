@@ -2,6 +2,7 @@ package pe.edu.upeu.lambacademic.matricula.periodo.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
@@ -23,7 +24,7 @@ public record PeriodoRequest(
         LocalDate fechaFin,
 
         @NotBlank
-        @Size(max = 20)
+        @Pattern(regexp = "PLANIFICADO|ACTIVO|CERRADO", message = "el estado debe ser PLANIFICADO, ACTIVO o CERRADO")
         String estado
 ) {
 }

@@ -1,11 +1,12 @@
 package pe.edu.upeu.lambacademic.matricula.matricula.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,22 +14,20 @@ import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaResponse;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaRegistroRequest;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaReporteResponse;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaResumenResponse;
-import pe.edu.upeu.lambacademic.matricula.matricula.mapper.MatriculaMapper;
-import pe.edu.upeu.lambacademic.matricula.matricula.repository.MatriculaRepository;
 import pe.edu.upeu.lambacademic.matricula.matricula.service.MatriculaService;
 
 
 import java.util.List;
 
+@Tag(name = "Matriculas", description = "Registro transaccional de matricula (cabecera-detalle)")
 @RestController
 @RequestMapping("/api/v1/matriculas")
 @RequiredArgsConstructor
 public class MatriculaController {
 
     private final MatriculaService matriculaService;
-    private final MatriculaRepository matriculaRepository;
-    private final MatriculaMapper matriculaMapper;
 
+    @Operation(summary = "Registra una matricula con sus secciones, reserva cupos y genera el cargo financiero")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public MatriculaResponse registrar(
@@ -40,6 +39,7 @@ public class MatriculaController {
         );
     }
 
+    @Operation(summary = "Busca matriculas con filtros combinados, paginacion y orden")
     @GetMapping
     public Page<MatriculaResponse> buscar(
             @RequestParam(required = false) Long estudianteId,
@@ -50,27 +50,18 @@ public class MatriculaController {
             @RequestParam(defaultValue = "fecha") String sortBy,
             @RequestParam(defaultValue = "desc") String direction) {
 
-        Sort.Direction sortDirection =
-                Sort.Direction.fromString(direction);
-
-        Pageable pageable = PageRequest.of(
-                page,
-                size,
-                Sort.by(sortDirection, sortBy)
-        );
-
-        return matriculaRepository
-                .buscar(estudianteId, periodoId, estado, pageable)
-                .map(matriculaMapper::toResponse);
+        return matriculaService.buscar(estudianteId, periodoId, estado, page, size, sortBy, direction);
     }
 
+    @Operation(summary = "Resumen: cada matricula con su cantidad de detalles")
     @GetMapping("/resumen")
     public List<MatriculaResumenResponse> resumen() {
         return matriculaService.buscarResumen();
     }
 
+    @Operation(summary = "Reporte agregado: total de matriculas y detalles con filtros opcionales")
     @GetMapping("/reporte")
-public MatriculaReporteResponse reporte(
+    public MatriculaReporteResponse reporte(
             @RequestParam(required = false) Long estudianteId,
             @RequestParam(required = false) Long periodoId,
             @RequestParam(required = false) String estado) {
@@ -80,6 +71,26 @@ public MatriculaReporteResponse reporte(
                 periodoId,
                 estado
         );
+    }
+
+    @Operation(summary = "Consulta una matricula con sus detalles")
+    @GetMapping("/{id}")
+    public MatriculaResponse obtener(@PathVariable Long id) {
+        return matriculaService.obtener(id);
+    }
+
+    @Operation(summary = "Anula una matricula: libera cupos y anula su cargo (si no tiene pagos)")
+    @PatchMapping("/{id}/anular")
+    public MatriculaResponse anular(@PathVariable Long id) {
+        return matriculaService.anular(id);
+    }
+
+    @Operation(summary = "Genera (idempotente) el cargo financiero de una matricula que no lo tenga")
+    @PostMapping("/{id}/cargo")
+    public MatriculaResponse generarCargo(
+            @PathVariable Long id,
+            @RequestParam(required = false) @Min(1) @Max(12) Integer numeroCuotas) {
+        return matriculaService.generarCargo(id, numeroCuotas);
     }
 
 }

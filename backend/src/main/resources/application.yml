@@ -3,3 +3,7 @@ spring:
     name: lamb-academic
   profiles:
     active: dev
+  # Credenciales locales fuera de Git: backend/.env (copiar desde backend/.env.example).
+  # Si el archivo no existe, se usan las variables de entorno del sistema.
+  config:
+    import: optional:file:.env[.properties]

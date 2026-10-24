@@ -12,7 +12,7 @@
 	<artifactId>lamb-academic</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>lamb-academic</name>
-	<description/>
+	<description>LAMB Academic: backend REST unico (monolito modular) de Base Universal, Core Academico, Matricula y Finanzas</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -98,7 +98,19 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator-test</artifactId>
 			<scope>test</scope>
-	</dependency>
+		</dependency>
+		<!-- @WebMvcTest + MockMvc (Spring Boot 4 movio WebMvcTest a este starter) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- Verificacion de limites de modulos y documentacion (ModularityTests) -->
+		<dependency>
+			<groupId>org.springframework.modulith</groupId>
+			<artifactId>spring-modulith-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>

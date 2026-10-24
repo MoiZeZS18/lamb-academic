@@ -1,0 +1,15 @@
+# Secretos locales (copiar desde los *.example)
+infra/.env
+backend/.env
+
+# Respaldos de Oracle (Data Pump): contienen datos reales
+infra/backups/
+
+# Logs del backend
+backend/logs/
+
+# IDE
+.vscode/
+
+# Copia duplicada del proyecto encontrada en la auditoria (ver ESTADO_INTEGRACION.md)
+/lamb-academic/

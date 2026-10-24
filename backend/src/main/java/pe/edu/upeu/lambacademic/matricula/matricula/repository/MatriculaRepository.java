@@ -1,6 +1,9 @@
 package pe.edu.upeu.lambacademic.matricula.matricula.repository;
 
+import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -72,4 +75,31 @@ public interface MatriculaRepository extends JpaRepository<Matricula, Long> {
             @Param("periodoId") Long periodoId,
             @Param("estado") String estado
     );
+
+    /* ---------------------------- integracion ---------------------------- */
+
+    @EntityGraph(attributePaths = "detalles")
+    Optional<Matricula> findDetalladaById(Long id);
+
+    /** Hay una matricula activa (no anulada) del estudiante en el periodo. */
+    boolean existsByClaveActiva(String claveActiva);
+
+    boolean existsByPeriodoId(Long periodoId);
+
+    /**
+     * Cursos (de la lista dada) que el estudiante ya llevo en periodos que terminaron antes
+     * de la fecha indicada, en matriculas no anuladas. Se usa para validar prerrequisitos.
+     */
+    @Query("""
+            SELECT DISTINCT d.cursoId
+            FROM Matricula m JOIN m.detalles d, Periodo p
+            WHERE p.id = m.periodoId
+              AND m.estudianteId = :estudianteId
+              AND m.estado <> 'ANULADA'
+              AND d.cursoId IN :cursoIds
+              AND p.fechaFin < :antesDe
+            """)
+    List<Long> cursosLlevadosAntesDe(@Param("estudianteId") Long estudianteId,
+                                     @Param("cursoIds") Collection<Long> cursoIds,
+                                     @Param("antesDe") LocalDate antesDe);
 }

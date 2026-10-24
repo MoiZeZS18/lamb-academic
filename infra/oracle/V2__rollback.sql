@@ -1,0 +1,42 @@
+-- =============================================================================
+-- LAMB Academic - REVERSION de V2 (NO SE EJECUTA AUTOMATICAMENTE)
+--
+-- ADVERTENCIA: elimina las tablas creadas por V2 y TODOS los datos registrados en ellas
+-- (personas, alumnos, cursos, secciones, cargos...). Ejecutar solo con autorizacion
+-- explicita y despues de un respaldo Data Pump verificado.
+--
+-- No toca las filas previas de PERIODOS, MATRICULAS ni DETALLE_MATRICULA; solo retira
+-- las columnas/restricciones agregadas por V2 (sus valores nuevos se perderian).
+-- =============================================================================
+
+WHENEVER SQLERROR CONTINUE
+SET ECHO ON
+
+DROP TABLE FIN_PAGOS;
+DROP TABLE FIN_DETALLE_CARGOS;
+DROP TABLE FIN_CARGOS;
+DROP TABLE FIN_CONCEPTOS_PAGO;
+
+ALTER TABLE DETALLE_MATRICULA DROP CONSTRAINT UK_DET_MATRICULA_SECCION;
+DROP INDEX IX_DET_MATRICULA_SECCION;
+ALTER TABLE DETALLE_MATRICULA DROP (CURSO_ID, CREDITOS);
+
+ALTER TABLE MATRICULAS DROP CONSTRAINT UK_MATRICULA_ACTIVA;
+DROP INDEX IX_MATRICULAS_EST_PER;
+ALTER TABLE MATRICULAS DROP (TOTAL_CREDITOS, CLAVE_ACTIVA, FECHA_ANULACION);
+
+DROP TABLE HORARIOS_AULA;
+DROP TABLE SECCIONES;
+DROP TABLE DETALLE_PLAN_ESTUDIO;
+DROP TABLE PLAN_ESTUDIO;
+DROP TABLE CURSO;
+
+DROP TABLE DOCUMENTOS_ADJUNTOS;
+DROP TABLE EXPEDIENTES;
+DROP TABLE ALUMNOS;
+DROP TABLE PERSONA;
+DROP TABLE ESCUELA;
+DROP TABLE FACULTAD;
+DROP TABLE SEDE;
+
+EXIT

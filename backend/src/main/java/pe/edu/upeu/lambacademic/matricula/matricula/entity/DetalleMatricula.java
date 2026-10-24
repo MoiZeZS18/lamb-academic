@@ -8,12 +8,15 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "DETALLE_MATRICULA")
+@Table(name = "DETALLE_MATRICULA",
+        uniqueConstraints = @UniqueConstraint(name = "UK_DET_MATRICULA_SECCION",
+                columnNames = {"MATRICULA_ID", "SECCION_ID"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -30,4 +33,11 @@ public class DetalleMatricula {
 
     @Column(name = "SECCION_ID", nullable = false)
     private Long seccionId;
+
+    /** Copia del curso y sus creditos al momento de matricular (registro historico, S4 2.2). */
+    @Column(name = "CURSO_ID")
+    private Long cursoId;
+
+    @Column(name = "CREDITOS")
+    private Integer creditos;
 }

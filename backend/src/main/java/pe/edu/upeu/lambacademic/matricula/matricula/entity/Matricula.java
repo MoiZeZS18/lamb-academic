@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,6 +40,21 @@ public class Matricula {
 
     @Column(name = "ESTADO", nullable = false, length = 20)
     private String estado;
+
+    /** Suma de creditos de los detalles (integracion). NULL en matriculas previas. */
+    @Column(name = "TOTAL_CREDITOS")
+    private Integer totalCreditos;
+
+    /**
+     * "estudianteId-periodoId" mientras la matricula esta activa; NULL al anularla.
+     * UK_MATRICULA_ACTIVA en Oracle impide dos matriculas activas del mismo estudiante
+     * en el mismo periodo, incluso si dos peticiones llegan a la vez.
+     */
+    @Column(name = "CLAVE_ACTIVA", length = 40, unique = true)
+    private String claveActiva;
+
+    @Column(name = "FECHA_ANULACION")
+    private LocalDateTime fechaAnulacion;
 
     @OneToMany(
             mappedBy = "matricula",

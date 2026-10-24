@@ -1,10 +1,9 @@
 package pe.edu.upeu.lambacademic.matricula.matricula.exception;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
+import pe.edu.upeu.lambacademic.exception.ResourceNotFoundException;
 
-@ResponseStatus(HttpStatus.BAD_REQUEST)
-public class EstudianteNoEncontradoException extends RuntimeException {
+/** Responde 404 a traves del manejador global (pe.edu.upeu.lambacademic.exception). */
+public class EstudianteNoEncontradoException extends ResourceNotFoundException {
 
     public EstudianteNoEncontradoException(String mensaje) {
         super(mensaje);

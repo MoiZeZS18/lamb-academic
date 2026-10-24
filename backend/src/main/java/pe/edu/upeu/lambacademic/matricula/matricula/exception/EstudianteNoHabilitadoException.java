@@ -1,10 +1,9 @@
 package pe.edu.upeu.lambacademic.matricula.matricula.exception;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
+import pe.edu.upeu.lambacademic.exception.ReglaNegocioException;
 
-@ResponseStatus(HttpStatus.BAD_REQUEST)
-public class EstudianteNoHabilitadoException extends RuntimeException {
+/** Responde 409 a traves del manejador global (pe.edu.upeu.lambacademic.exception). */
+public class EstudianteNoHabilitadoException extends ReglaNegocioException {
 
     public EstudianteNoHabilitadoException(String mensaje) {
         super(mensaje);
