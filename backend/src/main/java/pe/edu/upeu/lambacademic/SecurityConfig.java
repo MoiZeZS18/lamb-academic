@@ -114,14 +114,14 @@ public class SecurityConfig {
         return (request, response, ex) -> {
             estandar.commence(request, response, ex);
             escribir(jsonMapper, request, response, HttpStatus.UNAUTHORIZED,
-                    "Se requiere iniciar sesion: token ausente, vencido o invalido");
+                    "Se requiere iniciar sesión: la sesión no existe, venció o no es válida");
         };
     }
 
     /** 403: el token es valido pero el rol no alcanza; reintentar no cambia nada (S11 2.6). */
     private AccessDeniedHandler sinPermiso(JsonMapper jsonMapper) {
         return (request, response, ex) -> escribir(jsonMapper, request, response, HttpStatus.FORBIDDEN,
-                "Tu rol no tiene permiso para esta operacion");
+                "Tu rol no tiene permiso para esta operación");
     }
 
     private static void escribir(JsonMapper jsonMapper, HttpServletRequest request, HttpServletResponse response,

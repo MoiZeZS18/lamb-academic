@@ -46,7 +46,7 @@ public class MatriculaController {
             @AuthenticationPrincipal Jwt jwt) {
 
         IdentidadToken.exigirPropio(IdentidadToken.estudianteRestringido(jwt),
-                request.matricula().estudianteId(), "la matricula");
+                request.matricula().estudianteId(), "la matrícula");
         return matriculaService.registrar(
                 request.matricula(),
                 request.detalles()
@@ -68,7 +68,7 @@ public class MatriculaController {
         Long propio = IdentidadToken.estudianteRestringido(jwt);
         if (propio != null) {
             // Pedir expresamente las de otro alumno es un 403; sin filtro, solo se listan las propias.
-            IdentidadToken.exigirPropio(propio, estudianteId == null ? propio : estudianteId, "las matriculas");
+            IdentidadToken.exigirPropio(propio, estudianteId == null ? propio : estudianteId, "las matrículas");
             estudianteId = propio;
         }
         return matriculaService.buscar(estudianteId, periodoId, estado, page, size, sortBy, direction);

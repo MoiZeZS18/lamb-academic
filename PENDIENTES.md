@@ -56,9 +56,9 @@ Actualizado tras la auditoría técnica final (2026-10-24). Estado: **Resuelto**
 | # | Pendiente | Prioridad |
 |---|---|---|
 | E1 | Evidencias con captura de reloj y usuario (S11 4.3) tomadas por el estudiante: login tecleado por una persona en Keycloak, expiración real (bajar *Access Token Lifespan* a 1 min) | Alta, antes de sustentar |
-| E2 | Revisión por el autor de Core Académico del nuevo `DELETE /api/v1/secciones/{id}` y `SeccionEnUsoPort` | Alta |
+| E2 | Revisión por el autor de Core Académico del nuevo `DELETE /api/v1/secciones/{id}` y `SeccionEnUsoPort`: solicitud detallada en `docs/REVISION_DELETE_SECCIONES.md` | Alta |
 | E3 | Cada compañero: `generar_secretos.py` + levantar Keycloak + `sembrar_usuarios.py` en su equipo (las claves no viajan por Git) | Media |
-| E4 | La guía S7 (PDF) y la plantilla `lp2-demo.md` no estaban en los insumos: se usó la SPA `bomerp-frontend` (S7) y el texto de S12; contrastar con los originales cuando estén disponibles | Media |
+| E4 | ~~Guía S7~~: estaba en los insumos como `COMPROBANTE-WJQ7Q29.pdf`; ya se comparó (`docs/FRONTEND_MATRICULA.md` §6). Sigue faltando la plantilla oficial `lp2-demo.md`: contrastar `docs/lp2-demo-matricula.md` cuando esté disponible | Baja |
 | E5 | Rol DOCENTE no implementado (no hay pantallas de docente en esta unidad) | Baja |
 | E6 | Editar los horarios de una sección ya programada: el contrato del backend no lo permite (solo docente y vacantes) | Baja |
 | E7 | Keycloak en `start-dev` sin TLS ni hostname: solo desarrollo (S10b 9) | Producción |

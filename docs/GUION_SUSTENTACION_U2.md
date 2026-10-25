@@ -32,7 +32,7 @@ Tiempos de S12 (Tabla 3): presentación 8 min, demo 5 min, preguntas 5 min.
 3. **Cabecera-detalle**: elegir IS101 e IS104 → cruce marcado y envío bloqueado; quitar IS104, elegir
    IS102 e IS201 → registrar → **409 real** “Para matricularse en IS201 debe haber aprobado antes
    IS101”. Quitar IS201 → confirmar → matrícula con su cargo (S/ 550, 5 cuotas).
-4. **403**: cambiar la URL a `/matricula/consulta/93` → “No tienes acceso a la matricula de otro
+4. **403**: cambiar la URL a `/matricula/consulta/93` → “No tienes acceso a la matrícula de otro
    estudiante”. En Network: un solo 403, sin refresco.
 5. **401**: esperar la expiración (1 min) y abrir “Matrículas” → Network: 401, POST `/token` con
    `grant_type=refresh_token`, reintento 200.

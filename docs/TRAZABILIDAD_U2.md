@@ -5,11 +5,11 @@ endpoint real, la prueba y la evidencia. Rutas relativas a `frontend/src/app/` s
 
 | # | Requisito | Sesión / ejemplo del docente | Implementación LAMB | Endpoint | Prueba | Evidencia |
 |---|---|---|---|---|---|---|
-| 1 | Proyecto con `core/shared/features` | S7 (`bomerp-frontend` S7), S12 Tabla 1 | `core/`, `shared/`, `features/` | — | `app.spec.ts`, build de producción | `ng build`: 88 kB iniciales comprimidos |
-| 2 | Navegación en ruta padre con `router-outlet` | S7 `Layout` | `core/layout/layout.*`, `app.routes.ts` | — | `layout.spec.ts` | Navegador: menú y contenido |
-| 3 | `X-Trace-ID` en cada petición | S7/S1 `traceIdInterceptor` | `core/interceptors/trace-id-interceptor.ts` | todas | `SecurityConfigTest` (traza en 401) | Cabecera devuelta por el backend |
-| 4 | URL base centralizada | S7 `ApiService` | `core/services/api-service.ts` | — | `servicios.spec.ts` | — |
-| 5 | CRUD independiente | S7 `CategoriaList/Form` | `features/matricula/periodo/*` | `GET/POST/PUT/DELETE /api/v1/periodos` | `periodo-form.spec.ts`, `servicios.spec.ts` | Navegador ADMIN: crear/editar/eliminar 2099-I; 409 al eliminar 2026-II |
+| 1 | Proyecto con `core/shared/features` | S7 2.5, 3.3–3.4; S12 Tabla 1 | `core/`, `shared/`, `features/` | — | `app.spec.ts`, build de producción | `ng build`: 88 kB iniciales comprimidos |
+| 2 | Navegación en ruta padre con `router-outlet` | S7 2.4, 3.5–3.6 (`Layout`, `Inicio`) | `core/layout/layout.*`, `app.routes.ts` | — | `layout.spec.ts` | Navegador: menú y contenido |
+| 3 | `X-Trace-ID` en cada petición | S7 3.9 (`traceIdInterceptor`) | `core/interceptors/trace-id-interceptor.ts` | todas | `SecurityConfigTest` (traza en 401) | Cabecera devuelta por el backend |
+| 4 | URL base centralizada | S7 2.7, 3.9 (`ApiService`, `environment.ts`) | `core/services/api-service.ts` | — | `servicios.spec.ts` | — |
+| 5 | CRUD independiente | S7 2.8, 3.10–3.15 (`CategoriaService/List/Form`) | `features/matricula/periodo/*` | `GET/POST/PUT/DELETE /api/v1/periodos` | `periodo-form.spec.ts`, `servicios.spec.ts` | Navegador ADMIN: crear/editar/eliminar 2099-I; 409 al eliminar 2026-II |
 | 6 | Modelos que llega/que se envía | S8 3.2 `Producto/ProductoRequest` | `seccion.model.ts` (`Seccion` / `SeccionRequest` / `SeccionActualizacionRequest`) | `/api/v1/secciones` | `servicios.spec.ts` | Coinciden con el OpenAPI |
 | 7 | Servicio de la tabla dependiente con filtro en servidor | S8 3.3, 3.5 | `seccion-service.ts` | `GET /api/v1/secciones?periodoId&cursoId&estado&conVacantes` | `servicios.spec.ts` | Filtros de la lista |
 | 8 | Lista con información relacionada por nombre | S8 3.4 | `seccion-list.*` (curso anidado, docente) | idem | navegador | Lista de secciones |

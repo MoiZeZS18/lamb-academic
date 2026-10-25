@@ -136,7 +136,7 @@ public class MatriculaService {
     @Transactional(readOnly = true)
     public MatriculaResponse obtener(Long id, Long estudianteRestringido) {
         Matricula matricula = buscarOFallar(id);
-        IdentidadToken.exigirPropio(estudianteRestringido, matricula.getEstudianteId(), "la matricula");
+        IdentidadToken.exigirPropio(estudianteRestringido, matricula.getEstudianteId(), "la matrícula");
         return conCargoConsultado(matriculaMapper.toResponse(matricula));
     }
 

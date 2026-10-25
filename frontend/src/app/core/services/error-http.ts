@@ -24,13 +24,12 @@ export function mensajeHttp(err: HttpErrorResponse, generico: string): string {
   const cuerpo = cuerpoError(err);
   switch (err.status) {
     case 0:
-      return 'No se pudo conectar con el servidor. Verifica que el backend esté en ejecución.';
+      return 'No se pudo conectar con el servidor de LAMB Academic. Verifica que esté en ejecución.';
     case 401:
       return 'Tu sesión expiró. Vuelve a iniciar sesión.';
     case 403:
-      return cuerpo?.message && cuerpo.message !== 'Tu rol no tiene permiso para esta operacion'
-        ? cuerpo.message
-        : 'Tu rol no tiene permiso para esta operación.';
+      // El backend ya explica el motivo (rol insuficiente o recurso de otro estudiante).
+      return cuerpo?.message ?? 'Tu rol no tiene permiso para esta operación.';
     case 400:
       if (cuerpo?.errores && Object.keys(cuerpo.errores).length) {
         return 'Datos no válidos: ' + Object.entries(cuerpo.errores).map(([c, m]) => `${c}: ${m}`).join('; ');

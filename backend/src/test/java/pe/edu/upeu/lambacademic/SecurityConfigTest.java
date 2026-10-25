@@ -90,7 +90,7 @@ class SecurityConfigTest {
                         .contentType(MediaType.APPLICATION_JSON).content(PERIODO))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
-                .andExpect(jsonPath("$.message").value("Tu rol no tiene permiso para esta operacion"));
+                .andExpect(jsonPath("$.message").value("Tu rol no tiene permiso para esta operación"));
         mockMvc.perform(post("/api/v1/periodos").with(coordinador())
                         .contentType(MediaType.APPLICATION_JSON).content(PERIODO))
                 .andExpect(status().isForbidden());
@@ -115,7 +115,7 @@ class SecurityConfigTest {
         mockMvc.perform(post("/api/v1/matriculas").with(estudiante(1001))
                         .contentType(MediaType.APPLICATION_JSON).content(MATRICULA_DE_1002))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("No tienes acceso a la matricula de otro estudiante"));
+                .andExpect(jsonPath("$.message").value("No tienes acceso a la matrícula de otro estudiante"));
         verifyNoInteractions(matriculaService);
     }
 
@@ -150,7 +150,7 @@ class SecurityConfigTest {
     void estudianteSinAlumnoVinculadoRecibe403() throws Exception {
         mockMvc.perform(get("/api/v1/matriculas/93").with(estudianteSinAlumno()))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("alumno_id")));
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("no está vinculada a ningún alumno")));
         verifyNoInteractions(matriculaService);
     }
 

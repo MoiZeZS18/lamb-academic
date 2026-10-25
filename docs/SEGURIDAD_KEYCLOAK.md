@@ -34,7 +34,8 @@ Keycloak vive en contenedores aparte (`infra/compose-dev.yml`: servicios `keyclo
 | Mapper `alumno_id` | atributo de usuario `alumnoId` → claim `alumno_id` (long) en access e id token | Vincula al usuario con `ALUMNOS.ID` (patrón DIST S07 citado en S10b 1) |
 | Perfil de usuario | `alumnoId` editable **solo por el administrador** | Un estudiante no puede cambiar a qué alumno representa |
 | Vida del access token | 300 s (valor por defecto, S10b 6) | Ventana corta; la SPA refresca ante 401 |
-| Tema de login | `lamb` (hereda `keycloak.v2`, solo colores y marca) | Identidad LAMB sin copiar recursos institucionales |
+| Tema de login | `lamb` (hereda `keycloak.v2`, solo colores, marca y `messages_es.properties`) | Identidad LAMB sin copiar recursos institucionales |
+| Idioma | `internationalizationEnabled`, `supportedLocales = [es]`, `defaultLocale = es`; la consola de administración (realm `master`) también en español (`sembrar_usuarios.py`, S10b 3.0) | Todo el sistema se presenta en español; “Usuario o email” se reemplazó por “Usuario o correo electrónico” |
 | Fuerza bruta | activada (5 intentos) | Protección básica del login |
 
 `--import-realm` solo importa el realm si aún no existe: los cambios hechos después en la consola
@@ -62,8 +63,9 @@ clave de administración de Keycloak y la de su Postgres están en `infra/.env`.
   coordinación para matricular a cualquier alumno). Si quien llama es ESTUDIANTE y ese campo no
   coincide con su `alumno_id`, la respuesta es **403** y no se toca la base.
 - Cambiar el id en la URL (`/matricula/consulta/93` siendo José) responde **403** “No tienes acceso
-  a la matricula de otro estudiante” (403 y no 404: existe, pero no es suya; S10b 7.3).
-- Un ESTUDIANTE sin `alumnoId` asignado recibe 403 explicado (“no esta vinculado a ningun alumno”).
+  a la matrícula de otro estudiante” (403 y no 404: existe, pero no es suya; S10b 7.3).
+- Un ESTUDIANTE sin `alumnoId` asignado recibe 403 explicado (“Tu cuenta no está vinculada a ningún
+  alumno. Solicita a la administración que registre tu código de alumno”).
 - `GET /api/v1/auth/perfil` devuelve lo que el backend entiende del token (sub, usuario, roles del
   dominio, alumnoId), sin consultar ninguna base (S10 4.1).
 
@@ -99,7 +101,8 @@ Leyenda: ✔ permitido · ✔* permitido solo sobre sus propios datos (ABAC) · 
 
 Respuestas de error con el cuerpo común del backend (`timestamp, status, error, message, path,
 traceId`): **401** conserva además la cabecera estándar `WWW-Authenticate: Bearer ...` (RFC 6750);
-**403** dice “Tu rol no tiene permiso para esta operacion” o el motivo ABAC concreto. El filtro
+**401** dice “Se requiere iniciar sesión: la sesión no existe, venció o no es válida”;
+**403** dice “Tu rol no tiene permiso para esta operación” o el motivo ABAC concreto. El filtro
 `CorrelationIdFilter` corre antes que Spring Security, así que también los 401/403 llevan
 `X-Trace-ID`.
 

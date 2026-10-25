@@ -1,4 +1,4 @@
-# Matriz de requisitos — LAMB Academic Backend (Unidad I)
+# Matriz de requisitos — LAMB Academic (Unidad I y Unidad II)
 
 Leyenda de estado: **Cumple** (implementado y probado) · **Parcial** · **Pendiente**.
 Columna «Origen»: **Docente** = exigido por las guías S1–S6; **Integración** = mejora técnica
@@ -67,3 +67,21 @@ necesaria para unir los módulos (no es requisito del docente); **Usuario** = pe
 | I9 | Paginación en Oracle + JSON de página estable (`VIA_DTO`) | Rendimiento y contrato para el frontend |
 | I10 | Cargo manual de MATRICULA rechazado | Evitar deuda duplicada |
 | I11 | Pruebas HTTP repetibles con autolimpieza | No alterar datos reales |
+
+## 4. Unidad II: frontend de Matrícula y seguridad con Keycloak (S7–S12)
+
+Detalle por archivo, endpoint, prueba y evidencia: `docs/TRAZABILIDAD_U2.md` (37 filas). Resumen:
+
+| # | Requisito | Guía | Implementación | Prueba | Estado |
+|---|---|---|---|---|---|
+| U2-1 | SPA Angular con `core/shared/features`, layout con `router-outlet`, inicio real en `/` | S7 2.4–2.5, 3.5–3.7 | `frontend/src/app/core`, `shared`, `features` | `layout.spec.ts`, navegador | Cumple |
+| U2-2 | `ApiService`, servicios por recurso, interceptor `X-Trace-ID` | S7 2.7, 3.9–3.10 | `core/services/api-service.ts`, `*-service.ts`, `trace-id-interceptor.ts` | `servicios.spec.ts` | Cumple |
+| U2-3 | CRUD independiente | S7 3.10–3.15 | Periodo académico | `periodo-form.spec.ts`, navegador (ADMIN) | Cumple |
+| U2-4 | CRUD dependiente con lista desplegable, autocomplete y validación de la dependencia | S8 | Sección (Curso, Periodo, Docente) + `DELETE /api/v1/secciones/{id}` | `seccion-form.spec.ts`, `SeccionServiceTest`, navegador | Cumple (DELETE pendiente de revisión de Core Académico: `docs/REVISION_DELETE_SECCIONES.md`) |
+| U2-5 | Formulario cabecera-detalle con FormArray, cálculo en vivo, confirmación y errores reales | S9 3.4–3.9 | Inscripción de matrícula | `matricula-form.spec.ts`, navegador (409 real de prerrequisito) | Cumple |
+| U2-6 | Consultas y reportes con filtros | S9 3.7, 3.10–3.11 | Consulta paginada, detalle con cargo, horario semanal, reportes | `matricula-list.spec.ts`, navegador | Cumple |
+| U2-7 | Keycloak: realm propio, roles, cliente público, backend como Resource Server | S10b | `infra/keycloak`, `SecurityConfig`, `issuer-uri` | `SecurityConfigTest` (13), `verificar_keycloak.py` (8) | Cumple |
+| U2-8 | Identidad desde el token, no desde el request (filtro por dueño) | S10b 7.3 | `IdentidadToken` (`alumno_id`) | `SecurityConfigTest`, `matriz_accesos.py` (22) | Cumple |
+| U2-9 | Authorization Code + PKCE, token en memoria (espejo en `sessionStorage`), guards, interceptor con un refresco ante 401, 403 sin reintento, menú por rol, logout real | S11 | `core/auth`, `core/guards`, `core/interceptors`, `core/layout` | `auth-service.spec.ts`, `auth-interceptor.spec.ts`, `guards.spec.ts`, `layout.spec.ts`, navegador | Cumple |
+| U2-10 | Todo el sistema en español (pantallas, login de Keycloak, documentación) | Misión | Textos de la SPA; realm y consola en `es`; `messages_es.properties` | Revisión de textos, navegador | Cumple |
+| U2-11 | Producto de unidad y sustentación | S12 | `docs/lp2-demo-matricula.md`, `docs/GUION_SUSTENTACION_U2.md` | — | Cumple (falta la plantilla oficial `lp2-demo.md` para contrastar) |

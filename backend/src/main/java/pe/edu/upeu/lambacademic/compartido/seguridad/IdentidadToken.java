@@ -64,7 +64,8 @@ public final class IdentidadToken {
         if (valor instanceof String texto && texto.matches("\\d{1,18}")) {
             return Long.valueOf(texto);
         }
-        throw new AccesoDenegadoException("El usuario no esta vinculado a ningun alumno (falta el claim alumno_id)");
+        throw new AccesoDenegadoException("Tu cuenta no está vinculada a ningún alumno. Solicita a la administración que "
+                + "registre tu código de alumno");
     }
 
     /** 403 si un estudiante intenta operar sobre datos de otro alumno. */

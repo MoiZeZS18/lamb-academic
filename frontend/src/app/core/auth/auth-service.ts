@@ -93,7 +93,9 @@ export class AuthService {
     sessionStorage.removeItem(CLAVE_STATE);
     if (!verifier || stateRecibido !== stateEsperado) {
       sessionStorage.removeItem(CLAVE_CODE_VERIFIER);
-      throw new Error('state o code_verifier invalido: posible CSRF, inicia el login de nuevo');
+      throw new Error(
+        'La respuesta de Keycloak no corresponde a esta solicitud de inicio de sesión (posible ataque CSRF). Inicia sesión de nuevo.',
+      );
     }
     const cuerpo = new URLSearchParams({
       grant_type: 'authorization_code',
@@ -110,7 +112,7 @@ export class AuthService {
     });
     sessionStorage.removeItem(CLAVE_CODE_VERIFIER);
     if (!respuesta.ok) {
-      throw new Error('No se pudo intercambiar el codigo por un token');
+      throw new Error('Keycloak no aceptó el código de autorización. Inicia sesión de nuevo.');
     }
     this.guardarSesion(await respuesta.json());
   }

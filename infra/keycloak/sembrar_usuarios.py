@@ -5,6 +5,7 @@
 - Cada usuario ESTUDIANTE queda vinculado al ALUMNOS.ID real de Oracle por ese atributo;
   el mapper alumno_id del cliente lamb-frontend lo publica en el token.
 - Las claves salen de infra/secretos/keycloak-usuarios.env (generar_secretos.py) y nunca se imprimen.
+- Deja el español como idioma predeterminado del realm lamb-academic y de la consola (realm master).
 
 Uso: python -I infra/keycloak/sembrar_usuarios.py
 """
@@ -71,6 +72,19 @@ def main():
     claves = leer_env(os.path.join(RAIZ, "secretos", "keycloak-usuarios.env"))
     token = token_admin(infra)
     base = f"/admin/realms/{REALM}"
+
+    # 0. Español como idioma predeterminado: realm de LAMB (login y cuenta) y realm master
+    #    (consola de administración, S10b 3.0). Idempotente.
+    for realm in (REALM, "master"):
+        _, rep_realm = pedir("GET", f"/admin/realms/{realm}", token)
+        if rep_realm.get("defaultLocale") != "es" or not rep_realm.get("internationalizationEnabled"):
+            estado, r = pedir("PUT", f"/admin/realms/{realm}", token, {
+                "internationalizationEnabled": True,
+                "supportedLocales": sorted(set(rep_realm.get("supportedLocales") or []) | {"es"}),
+                "defaultLocale": "es"})
+            print(f"realm {realm}: idioma español", "configurado" if estado == 204 else f"ERROR {estado} {r}")
+        else:
+            print(f"realm {realm}: idioma español ya configurado")
 
     # 1. Atributo alumnoId en el perfil de usuario, editable solo por el administrador.
     _, perfil = pedir("GET", f"{base}/users/profile", token)

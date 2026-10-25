@@ -3,6 +3,22 @@
 Rama `integracion/backend-unificado` · Oracle AI Database 26ai Free (`lamb-academic-oracle`,
 esquema `LAMB_APP`) · Java 21.0.12 · Spring Boot 4.0.8.
 
+## U2-R. Revisión de idioma y de la guía S7 (2026-10-24)
+
+Correcciones: mensajes visibles de la SPA sin anglicismos ni la palabra “backend”; mensajes 401/403
+del backend con tildes y sin “claim”; Keycloak con el español como idioma predeterminado también en la
+consola (realm `master`) y “Usuario o correo electrónico” en el login; `provideZonelessChangeDetection()`
+explícito como en S7 3.9. Resultados después de las correcciones:
+
+| Verificación | Resultado |
+|---|---|
+| Backend `mvnw clean package` | 104/104 |
+| Frontend `ng test` / `ng build` | 67/67 / correcto |
+| `verificar_keycloak.py` · `matriz_accesos.py` · `e2e_repetible.py` | 8/8 · 22/22 · 101/101 |
+| Pantalla de login de Keycloak | `lang="es"`; todos los textos en español |
+| 403 en la SPA | “No tienes acceso a la matrícula de otro estudiante” |
+| Huella de Oracle | Idéntica a la del cierre de seguridad |
+
 ## U2. Unidad II: frontend de Matrícula y Keycloak (2026-10-24, rama `unidad2/frontend-matricula`)
 
 | Verificación | Comando | Resultado |

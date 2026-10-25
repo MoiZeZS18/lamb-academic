@@ -17,7 +17,8 @@ Documentación: [ARQUITECTURA_LAMB.md](ARQUITECTURA_LAMB.md) · [MATRIZ_REQUISIT
 
 Unidad II: [docs/SEGURIDAD_KEYCLOAK.md](docs/SEGURIDAD_KEYCLOAK.md) ·
 [docs/FRONTEND_MATRICULA.md](docs/FRONTEND_MATRICULA.md) · [docs/lp2-demo-matricula.md](docs/lp2-demo-matricula.md) ·
-[docs/TRAZABILIDAD_U2.md](docs/TRAZABILIDAD_U2.md) · [docs/GUION_SUSTENTACION_U2.md](docs/GUION_SUSTENTACION_U2.md)
+[docs/TRAZABILIDAD_U2.md](docs/TRAZABILIDAD_U2.md) · [docs/GUION_SUSTENTACION_U2.md](docs/GUION_SUSTENTACION_U2.md) ·
+[docs/INFORME_FINAL_U2.md](docs/INFORME_FINAL_U2.md) · [docs/REVISION_DELETE_SECCIONES.md](docs/REVISION_DELETE_SECCIONES.md)
 
 ## Levantar el backend (Windows, PowerShell)
 

@@ -81,7 +81,7 @@ formulario de cada tabla son componentes separados (S12 Tabla 2, pregunta de S8)
 
 | Guía | Adaptación | Por qué |
 |---|---|---|
-| S7 (PDF no incluido en los insumos) | Se tomó como referencia la SPA `bomerp-frontend` (commit “S7: arquitectura SPA y CRUD de categorias”) y las referencias a S7 de S8, S11 y S12 | Mantener `core/layout`, `ApiService`, `traceIdInterceptor`, lista y formulario separados |
+| S7 3.5 (ícono `favicon.ico`, sin paquetes de íconos) | Íconos Lucide y `favicon.svg` propio | La misión pidió Lucide para una interfaz profesional; se usan solo íconos con función (menú, acciones) |
 | S9 `confirm()` | Diálogo de Angular Material | Mostrar el resumen completo de la matrícula |
 | S11 `AuthService.refrescar` | Una sola promesa compartida | Varios 401 simultáneos (la consulta pide 3 recursos a la vez) hacían 3 refrescos |
 | S11 `authInterceptor` | No adjunta el token a hosts distintos de `apiBaseUrl` | El token no debe salir hacia otro dominio |
@@ -96,3 +96,25 @@ Azul marino institucional (`#0f2a4a`), blanco y grises claros, acento turquesa (
 IBM Plex Sans/Mono, sombras mínimas, sin gradientes ni animaciones decorativas. Estados de carga,
 error y vacío en cada pantalla; tablas con desplazamiento horizontal y menú lateral desplegable en
 móvil. No se usan logotipos ni recursos de otras instituciones.
+
+## 6. Comparación con la guía S7 (Creación y arquitectura de la SPA)
+
+La guía S7 está en los insumos con un nombre equivocado (`COMPROBANTE-WJQ7Q29.pdf`). Se leyó completa
+y se contrastó con lo implementado:
+
+| Punto de la guía S7 | Lo que pide | En LAMB | Estado |
+|---|---|---|---|
+| 3.3 | `ng new … --routing --style=css --ssr=false` | Proyecto creado con Angular CLI 22.2.4, CSS y sin SSR | Cumple |
+| 2.4, 3.5 | Layout (encabezado, sidebar, menú) en `core/layout`, ruta padre con `router-outlet`; `App` solo con `router-outlet` | `core/layout/layout.*`; `app.ts` solo con `<router-outlet />` | Cumple |
+| 3.6 | Página de inicio real en `/`, sin redirección | `core/inicio/inicio.ts` público | Cumple |
+| 2.5, 3.6–3.7 | Rutas hijas del layout con `loadComponent` (carga perezosa) | Todas las pantallas son hijas del layout y perezosas | Cumple |
+| 2.6, 3.8 | Modelos como `interface`, no `class` | `*.model.ts` con `interface` y `type` | Cumple |
+| 3.7 | Carpeta por recurso con archivos planos (`--flat`) | `features/matricula/periodo/periodo-list.ts`, `periodo-form.ts`, `periodo-service.ts`, `periodo.model.ts` | Cumple |
+| 2.7, 3.9 | `environment.ts` + `ApiService` (URL base en un solo lugar) | `environments/environment.ts`, `core/services/api-service.ts` | Cumple |
+| 3.9 | `provideZonelessChangeDetection()` y `provideHttpClient(withInterceptors([traceIdInterceptor]))` | Ambos en `app.config.ts` (el primero se agregó en esta revisión para seguir la guía; Angular 22 ya lo usaba por defecto) | Cumple |
+| 3.9 | Interceptor `X-Trace-ID` con `crypto.randomUUID()` | `core/interceptors/trace-id-interceptor.ts` | Cumple |
+| 2.7, 3.10 | Servicio por recurso con `resource`; los componentes no importan `HttpClient` | `PeriodoService`, `SeccionService`, `MatriculaService`… | Cumple |
+| 2.7 (nota) | `HttpClient` + `subscribe()` en lugar de `httpResource()` | Se usa `HttpClient` + `subscribe()` | Cumple |
+| 3.11–3.15 | Lista y formulario separados, mensajes de carga/error/vacío, confirmación al eliminar, editar carga los datos actuales | `PeriodoList` / `PeriodoForm`; eliminar con diálogo; probado contra el backend real | Cumple |
+| 3.5 | Reusar `favicon.ico`, sin paquetes de íconos | Lucide + `favicon.svg` | Diferencia documentada (§4) |
+| 4.4 | Criterios mínimos (estructura, layout con dos rutas, servicio HTTP, interceptor, CRUD real) | Ver `docs/lp2-demo-matricula.md` §3 | Cumple |

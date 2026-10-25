@@ -94,7 +94,7 @@ Este documento compara contra el código original de cada aporte (ZIP de los com
 | Cambio | Detalle | Impacto en clientes |
 |---|---|---|
 | Autenticación | Todas las rutas `/api/**` (salvo `/api/v1/hello`) exigen `Authorization: Bearer <token de Keycloak>` | Sin token → **401** con `WWW-Authenticate: Bearer` y el cuerpo `ErrorResponse` |
-| Autorización por rol | Matriz completa en `docs/SEGURIDAD_KEYCLOAK.md` §5 | Rol insuficiente → **403** `"Tu rol no tiene permiso para esta operacion"` |
+| Autorización por rol | Matriz completa en `docs/SEGURIDAD_KEYCLOAK.md` §5 | Rol insuficiente → **403** `"Tu rol no tiene permiso para esta operación"` |
 | Filtro por dueño (ESTUDIANTE) | `GET /matriculas` se limita a sus matrículas; `GET /matriculas/{id}`, `POST /matriculas`, `GET /finanzas/cargos/{id}`, `/{id}/pagos`, `/estudiante/{id}`, `/estudiante/{id}/saldo` exigen que el recurso sea suyo (claim `alumno_id`) | Recurso ajeno → **403** con el motivo |
 | Nuevo | `DELETE /api/v1/secciones/{id}` → 204 | 404 si no existe; 409 si tiene matrículas (aunque estén anuladas), cupos ocupados o el periodo está cerrado |
 | Nuevo | `GET /api/v1/auth/perfil` → `{sub, usuario, nombre, email, roles, alumnoId}` | Lectura del token, sin base de datos |

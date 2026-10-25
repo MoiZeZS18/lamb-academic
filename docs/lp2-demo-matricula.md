@@ -22,7 +22,7 @@ insuficiente.
 
 | Sesión | Producto en Matrícula |
 |---|---|
-| S7 | SPA con `core/shared/features`, layout con `router-outlet`, `X-Trace-ID`, CRUD independiente de **Periodo académico** |
+| S7 | SPA con `core/shared/features`, layout con `router-outlet`, inicio real en `/`, `ApiService`, `X-Trace-ID`, CRUD independiente de **Periodo académico** (comparación con la guía en `docs/FRONTEND_MATRICULA.md` §6) |
 | S8 | CRUD dependiente de **Sección** (depende de Curso y Periodo; Docente opcional), listas desplegables y autocomplete, validación de la dependencia en el formulario y frente al 404/409 del backend |
 | S9 | **Inscripción cabecera-detalle** con FormArray, créditos y horario en vivo, confirmación, errores reales; **consulta** paginada con filtros y **reportes** |
 | S10 | (histórico) JWT propio; reemplazado en S10b |
@@ -41,7 +41,7 @@ insuficiente.
 | Login Keycloak | `/matricula/inscripcion` sin sesión | Redirección a `localhost:48080/.../auth` con `code_challenge_method=S256` y `state`; vuelta al destino pedido |
 | Token en memoria | Inspección de almacenamiento | `sessionStorage`: solo `lamb_sesion`; `localStorage`: vacío |
 | 401 con refresco | Token alterado en la sesión y recarga | 3 peticiones → 401; **1** POST de refresco a Keycloak; 3 reintentos → 200; sin bucle |
-| 403 sin reintento | José abre `/matricula/consulta/93` (de Ana) | 403 “No tienes acceso a la matricula de otro estudiante”; sin refresco |
+| 403 sin reintento | José abre `/matricula/consulta/93` (de Ana) | 403 “No tienes acceso a la matrícula de otro estudiante”; sin refresco |
 | Acción protegida | “Anular” solo para COORDINADOR/ADMIN | No aparece para ESTUDIANTE; el backend devuelve 403 si se fuerza (matriz 22/22) |
 | Integración entre módulos | Matrícula → Core Académico (secciones, cupos) → Finanzas (cargo) → Base Universal (alumno) | Registro, anulación (cupos liberados, cargo anulado) y consulta del cargo con cuotas |
 
