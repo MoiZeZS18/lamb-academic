@@ -1,6 +1,6 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { Router, RouterLink } from '@angular/router';
@@ -34,7 +34,7 @@ import { MatriculaService } from './matricula-service';
   imports: [RouterLink, FormsModule, DatePipe, CurrencyPipe, EtiquetaEstado, LucideCalendarDays, LucidePrinter, LucideReceipt],
   templateUrl: './matricula-detalle.html',
 })
-export class MatriculaDetalle implements OnInit {
+export class MatriculaDetalle {
   /** :id de la ruta (withComponentInputBinding). */
   readonly id = input.required<string>();
 
@@ -73,15 +73,32 @@ export class MatriculaDetalle implements OnInit {
     () => this.esCoordinacion() && !this.anulada() && this.periodo()?.estado === 'CERRADO',
   );
 
-  ngOnInit(): void {
-    this.cargar();
+  /** Numero de la ultima carga: las respuestas de una carga anterior se descartan. */
+  private ultimaCarga = 0;
+
+  constructor() {
+    // El router reutiliza el componente al pasar de /consulta/93 a /consulta/1: se recarga con cada :id.
+    effect(() => {
+      const id = this.id();
+      untracked(() => {
+        this.matricula.set(null);
+        this.periodo.set(null);
+        this.cargo.set(null);
+        this.nombreAlumno.set('');
+        this.cargar(id);
+      });
+    });
   }
 
-  private cargar(): void {
+  private cargar(id = this.id()): void {
+    const carga = ++this.ultimaCarga;
+    const vigente = () => carga === this.ultimaCarga;
     this.loading.set(true);
     this.error.set(null);
-    this.matriculaService.obtener(Number(this.id())).subscribe({
+    this.errorCargo.set(null);
+    this.matriculaService.obtener(Number(id)).subscribe({
       next: (matricula) => {
+        if (!vigente()) return;
         this.matricula.set(matricula);
         forkJoin({
           periodo: this.periodoService.obtener(matricula.periodoId),
@@ -91,6 +108,7 @@ export class MatriculaDetalle implements OnInit {
           alumnos: this.esCoordinacion() ? this.alumnoService.listar() : of([]),
         }).subscribe({
           next: ({ periodo, secciones, cursos, cargo, alumnos }) => {
+            if (!vigente()) return;
             const alumno = alumnos.find((a) => a.id === matricula.estudianteId);
             this.nombreAlumno.set(
               alumno
@@ -106,14 +124,16 @@ export class MatriculaDetalle implements OnInit {
             this.loading.set(false);
           },
           error: (err: HttpErrorResponse) => {
+            if (!vigente()) return;
             this.errorCargo.set(mensajeHttp(err, 'No se pudo consultar el cargo o la oferta del periodo.'));
             this.loading.set(false);
           },
         });
       },
       error: (err: HttpErrorResponse) => {
+        if (!vigente()) return;
         this.error.set(
-          err.status === 404 ? `La matrícula ${this.id()} no existe.` : mensajeHttp(err, 'No se pudo consultar la matrícula.'),
+          err.status === 404 ? `La matrícula ${id} no existe.` : mensajeHttp(err, 'No se pudo consultar la matrícula.'),
         );
         this.loading.set(false);
       },
