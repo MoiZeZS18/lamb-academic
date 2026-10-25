@@ -1,0 +1,203 @@
+<section class="pagina">
+  <header class="encabezado-pagina">
+    <div>
+      <p class="migas no-imprimir"><a routerLink="/matricula/consulta">Matrículas</a></p>
+      <h1>Matrícula {{ id() }}</h1>
+      @if (periodo(); as p) {
+        <p class="descripcion">Periodo {{ p.codigo }} · {{ p.nombre }}</p>
+      }
+    </div>
+    @if (matricula(); as m) {
+      <div class="acciones no-imprimir">
+        <a class="boton" routerLink="/matricula/horario" [queryParams]="{ matriculaId: m.id }">
+          <svg lucideCalendarDays aria-hidden="true"></svg>
+          Horario
+        </a>
+        <button type="button" class="boton" (click)="imprimir()">
+          <svg lucidePrinter aria-hidden="true"></svg>
+          Imprimir constancia
+        </button>
+        @if (esCoordinacion() && !anulada()) {
+          <button type="button" class="boton boton-peligro" [disabled]="procesando()" (click)="anular()">Anular</button>
+        }
+      </div>
+    }
+  </header>
+
+  @if (error()) {
+    <p class="mensaje mensaje-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="estado-carga">Consultando la matrícula…</p>
+  } @else if (matricula(); as m) {
+    <div class="rejilla rejilla-2">
+      <article class="tarjeta">
+        <header>
+          <h2>Cabecera</h2>
+          <app-etiqueta-estado [estado]="m.estado" />
+        </header>
+        <div class="cuerpo">
+          <dl class="datos">
+            <dt>Alumno</dt>
+            <dd>{{ nombreAlumno() || 'Alumno ' + m.estudianteId }}</dd>
+            <dt>Fecha</dt>
+            <dd class="num">{{ m.fecha | date: 'dd/MM/yyyy' }}</dd>
+            <dt>Cursos</dt>
+            <dd>{{ m.detalles.length }}</dd>
+            <dt>Total de créditos</dt>
+            <dd class="num">{{ m.totalCreditos ?? 'No registrado (matrícula previa a la integración)' }}</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="tarjeta">
+        <header>
+          <h2>Cargo financiero</h2>
+          @if (m.cargo; as c) {
+            <app-etiqueta-estado [estado]="c.estado" />
+          }
+        </header>
+        <div class="cuerpo">
+          @if (m.cargo; as c) {
+            <dl class="datos">
+              <dt>N.º de cargo</dt>
+              <dd class="num">{{ c.numeroCargo }}</dd>
+              <dt>Monto total</dt>
+              <dd class="num">{{ c.montoTotal | currency: 'PEN' : 'S/' }}</dd>
+              @if (cargo(); as detalle) {
+                <dt>Saldo pendiente</dt>
+                <dd class="num">{{ detalle.saldoPendiente | currency: 'PEN' : 'S/' }}</dd>
+                <dt>Emitido</dt>
+                <dd class="num">{{ detalle.fechaEmision | date: 'dd/MM/yyyy HH:mm' }}</dd>
+              }
+              <dt>Cuotas</dt>
+              <dd>{{ c.numeroCuotas }}</dd>
+            </dl>
+          } @else {
+            <div class="estado-vacio">
+              <strong>Sin cargo financiero</strong>
+              @if (anulada()) {
+                La matrícula está anulada.
+              } @else if (!m.totalCreditos) {
+                Es un registro anterior a la integración con Finanzas y no registra créditos.
+              } @else {
+                El cargo no se generó para esta matrícula.
+              }
+            </div>
+          }
+          @if (errorCargo()) {
+            <p class="mensaje mensaje-error">{{ errorCargo() }}</p>
+          }
+        </div>
+        @if (!m.cargo && esCoordinacion() && !anulada() && m.totalCreditos) {
+          <footer class="no-imprimir">
+            <button type="button" class="boton" [disabled]="procesando()" (click)="generarCargo()">
+              <svg lucideReceipt aria-hidden="true"></svg>
+              Generar cargo
+            </button>
+          </footer>
+        }
+      </article>
+    </div>
+
+    <article class="tarjeta">
+      <header><h2>Cursos matriculados</h2></header>
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Curso</th>
+              <th>Sección</th>
+              <th>Docente</th>
+              <th>Horario</th>
+              <th class="col-num">Créditos</th>
+              <th>Resultado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (d of m.detalles; track d.id) {
+              <tr>
+                <td class="celda-principal">{{ curso(d.cursoId) }}</td>
+                @if (seccion(d.seccionId); as s) {
+                  <td>{{ s.grupo }}</td>
+                  <td>{{ s.docenteNombre ?? 'Por asignar' }}</td>
+                  <td class="texto-pequeno">{{ resumenHorario(s.horarios) || 'Sin horario' }}</td>
+                } @else {
+                  <td colspan="3" class="texto-secundario">Sección {{ d.seccionId }} no disponible en la oferta del periodo</td>
+                }
+                <td class="col-num">{{ d.creditos ?? '—' }}</td>
+                <td>
+                  @if (puedeRegistrarResultado() && d.cursoId) {
+                    <select
+                      [ngModel]="d.resultado"
+                      (ngModelChange)="registrarResultado(d.id, $event)"
+                      [disabled]="procesando()"
+                      [attr.aria-label]="'Resultado de ' + curso(d.cursoId)"
+                    >
+                      <option [ngValue]="null" disabled>Registrar…</option>
+                      @for (r of resultados; track r) {
+                        <option [ngValue]="r">{{ r }}</option>
+                      }
+                    </select>
+                  } @else if (d.resultado) {
+                    <app-etiqueta-estado [estado]="d.resultado" />
+                  } @else {
+                    <span class="texto-secundario">Pendiente</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4">Total</td>
+              <td class="col-num num">{{ m.totalCreditos ?? '—' }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </article>
+
+    @if (cargo(); as detalle) {
+      <article class="tarjeta">
+        <header><h2>Cuotas del cargo {{ detalle.numeroCargo }}</h2></header>
+        <div class="tabla-contenedor">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th class="col-num">N.º</th>
+                <th>Concepto</th>
+                <th>Vencimiento</th>
+                <th class="col-num">Monto</th>
+                <th class="col-num">Pagado</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (q of detalle.cuotas; track q.id) {
+                <tr>
+                  <td class="col-num">{{ q.numeroCuota }}</td>
+                  <td>{{ q.conceptoNombre ?? 'Matrícula' }}</td>
+                  <td class="num">{{ q.fechaVencimiento | date: 'dd/MM/yyyy' }}</td>
+                  <td class="col-num num">{{ q.montoCuota | currency: 'PEN' : 'S/' }}</td>
+                  <td class="col-num num">{{ q.montoPagado | currency: 'PEN' : 'S/' }}</td>
+                  <td><app-etiqueta-estado [estado]="q.estado" /></td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3">Total</td>
+                <td class="col-num num">{{ detalle.montoTotal | currency: 'PEN' : 'S/' }}</td>
+                <td class="col-num num">{{ totalPagado() | currency: 'PEN' : 'S/' }}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </article>
+    }
+  }
+</section>

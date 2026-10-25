@@ -57,7 +57,9 @@ done
 
 # Regla 3: claves literales en configuracion
 patron='(password|passwd|pwd|secret|token|api[_-]?key|client[_-]?secret)["'\'']?[[:space:]]*[:=][[:space:]]*["'\'']?[^[:space:]"'\''$<{][^[:space:]"'\'']*'
-literales="$(agregadas '*.yml' '*.yaml' '*.properties' '*.env' '*.conf' '*.json' '*.xml' '*.sql' \
+# package-lock.json se excluye de esta regla: es generado y contiene nombres de paquetes como
+# "@inquirer/password"; la regla 2 (valores reales) lo sigue revisando.
+literales="$(agregadas '*.yml' '*.yaml' '*.properties' '*.env' '*.conf' '*.json' '*.xml' '*.sql'   ':(exclude)*package-lock.json' \
   | grep -iE "$patron" | grep -viE '\$\{[A-Za-z_]+' | cut -f1 | sort -u)"
 if [ -n "$literales" ]; then
   while IFS= read -r a; do

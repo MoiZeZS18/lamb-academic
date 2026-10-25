@@ -1,0 +1,25 @@
+// Tema de Angular Material (S8 3.10) alineado con la identidad LAMB. Material solo se usa en el
+// dialogo de confirmacion y el autocomplete; el resto de la SPA usa styles.css.
+@use '@angular/material' as mat;
+
+html {
+  color-scheme: light;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$cyan-palette,
+      ),
+      typography: 'IBM Plex Sans',
+      density: 0,
+    )
+  );
+  --mat-sys-primary: #173a63;
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-surface: #ffffff;
+  --mat-sys-surface-container: #ffffff;
+  --mat-sys-surface-container-high: #ffffff;
+  --mat-sys-on-surface: #1d2733;
+  --mat-sys-corner-extra-large: 6px;
+  --mat-sys-corner-extra-small: 4px;
+}

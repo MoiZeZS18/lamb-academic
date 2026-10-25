@@ -1,0 +1,66 @@
+<section class="pagina">
+  <header class="encabezado-pagina">
+    <div>
+      <p class="migas"><a routerLink="/matricula/periodos">Periodos académicos</a></p>
+      <h1>{{ id() ? 'Editar periodo' : 'Nuevo periodo' }}</h1>
+    </div>
+  </header>
+
+  <form class="tarjeta formulario-tarjeta" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+    <div class="cuerpo formulario">
+      @if (loading() && id()) {
+        <p class="estado-carga">Cargando periodo…</p>
+      }
+      @if (error()) {
+        <p class="mensaje mensaje-error" role="alert">{{ error() }}</p>
+      }
+
+      <div class="campos">
+        <div class="campo">
+          <label for="codigo">Código <span class="obligatorio">*</span></label>
+          <input id="codigo" type="text" formControlName="codigo" maxlength="20" placeholder="2027-I" />
+          @if (mensajeValidacion('codigo'); as m) {
+            <span class="error-campo">{{ m }}</span>
+          }
+        </div>
+        <div class="campo">
+          <label for="nombre">Nombre <span class="obligatorio">*</span></label>
+          <input id="nombre" type="text" formControlName="nombre" maxlength="100" />
+          @if (mensajeValidacion('nombre'); as m) {
+            <span class="error-campo">{{ m }}</span>
+          }
+        </div>
+      </div>
+
+      <div class="campos">
+        <div class="campo">
+          <label for="fechaInicio">Fecha de inicio <span class="obligatorio">*</span></label>
+          <input id="fechaInicio" type="date" formControlName="fechaInicio" />
+          @if (mensajeValidacion('fechaInicio'); as m) {
+            <span class="error-campo">{{ m }}</span>
+          }
+        </div>
+        <div class="campo">
+          <label for="fechaFin">Fecha de fin <span class="obligatorio">*</span></label>
+          <input id="fechaFin" type="date" formControlName="fechaFin" />
+          @if (mensajeValidacion('fechaFin'); as m) {
+            <span class="error-campo">{{ m }}</span>
+          }
+        </div>
+        <div class="campo">
+          <label for="estado">Estado <span class="obligatorio">*</span></label>
+          <select id="estado" formControlName="estado">
+            @for (estado of estados; track estado) {
+              <option [ngValue]="estado">{{ estado }}</option>
+            }
+          </select>
+          <span class="ayuda">Activo habilita la matrícula del periodo.</span>
+        </div>
+      </div>
+    </div>
+    <footer class="acciones">
+      <button type="submit" class="boton boton-primario" [disabled]="loading() || errorCarga()">Guardar</button>
+      <button type="button" class="boton" (click)="cancelar()">Cancelar</button>
+    </footer>
+  </form>
+</section>

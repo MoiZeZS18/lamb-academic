@@ -1,0 +1,79 @@
+<header class="encabezado no-imprimir">
+  @if (auth.autenticado()) {
+    <button
+      type="button"
+      class="boton-menu"
+      [attr.aria-expanded]="menuAbierto()"
+      aria-controls="menu-principal"
+      (click)="menuAbierto.set(!menuAbierto())"
+    >
+      @if (menuAbierto()) {
+        <svg lucideX aria-hidden="true"></svg>
+      } @else {
+        <svg lucideMenu aria-hidden="true"></svg>
+      }
+      <span class="visualmente-oculto">Menú</span>
+    </button>
+  }
+
+  <a routerLink="/" class="marca">
+    <svg lucideGraduationCap class="marca-icono" aria-hidden="true"></svg>
+    <span>LAMB <strong>Academic</strong></span>
+  </a>
+
+  <div class="sesion">
+    @if (auth.autenticado()) {
+      <div class="usuario">
+        <span class="usuario-nombre">{{ auth.usuario()?.nombre }}</span>
+        <span class="usuario-rol">{{ rolPrincipal() }}</span>
+      </div>
+      <button type="button" class="boton boton-encabezado" (click)="auth.cerrarSesion()">
+        <svg lucideLogOut aria-hidden="true"></svg>
+        <span>Cerrar sesión</span>
+      </button>
+    } @else {
+      <button type="button" class="boton boton-encabezado" (click)="auth.iniciarLogin('/matricula')">
+        <svg lucideLogIn aria-hidden="true"></svg>
+        <span>Iniciar sesión</span>
+      </button>
+    }
+  </div>
+</header>
+
+<div class="cuerpo-app">
+  @if (auth.autenticado()) {
+    <nav id="menu-principal" class="lateral no-imprimir" [class.abierto]="menuAbierto()" aria-label="Menú principal">
+      @for (grupo of menu(); track grupo.titulo) {
+        <div class="grupo">
+          <p class="grupo-titulo">{{ grupo.titulo }}</p>
+          @for (item of grupo.items; track item.ruta) {
+            <a
+              [routerLink]="item.ruta"
+              routerLinkActive="activo"
+              [routerLinkActiveOptions]="{ exact: !!item.exacto }"
+            >
+              <svg [lucideIcon]="item.icono" aria-hidden="true"></svg>
+              <span>{{ item.etiqueta }}</span>
+            </a>
+          }
+        </div>
+      }
+    </nav>
+  }
+
+  <main class="contenido">
+    <router-outlet />
+  </main>
+</div>
+
+<div class="avisos" aria-live="polite">
+  @for (aviso of avisos.avisos(); track aviso.id) {
+    <div class="aviso" [class]="'aviso aviso-' + aviso.tipo" role="status">
+      <span>{{ aviso.texto }}</span>
+      <button type="button" class="aviso-cerrar" (click)="avisos.cerrar(aviso.id)">
+        <svg lucideX aria-hidden="true"></svg>
+        <span class="visualmente-oculto">Cerrar aviso</span>
+      </button>
+    </div>
+  }
+</div>

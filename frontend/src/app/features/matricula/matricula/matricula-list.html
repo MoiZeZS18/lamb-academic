@@ -1,0 +1,191 @@
+<section class="pagina">
+  <header class="encabezado-pagina">
+    <div>
+      <p class="migas">Matrícula</p>
+      <h1>{{ esCoordinacion() ? 'Consulta de matrículas' : 'Mis matrículas' }}</h1>
+      <p class="descripcion">
+        {{ esCoordinacion() ? 'Matrículas de todos los alumnos, con sus cursos, créditos y cargo financiero.'
+          : 'Tus matrículas registradas, con los cursos, créditos y el cargo de cada una.' }}
+      </p>
+    </div>
+  </header>
+
+  <div class="tarjeta">
+    <div class="cuerpo barra-filtros">
+      <div class="campo">
+        <label for="f-periodo">Periodo</label>
+        <select id="f-periodo" [(ngModel)]="periodoFiltro" (ngModelChange)="filtrar()">
+          <option [ngValue]="null">Todos</option>
+          @for (p of periodos(); track p.id) {
+            <option [ngValue]="p.id">{{ p.codigo }}</option>
+          }
+        </select>
+      </div>
+      <div class="campo">
+        <label for="f-estado">Estado</label>
+        <select id="f-estado" [(ngModel)]="estadoFiltro" (ngModelChange)="filtrar()">
+          <option [ngValue]="null">Todos</option>
+          @for (e of estados; track e) {
+            <option [ngValue]="e">{{ e }}</option>
+          }
+        </select>
+      </div>
+      @if (esCoordinacion()) {
+        <div class="campo campo-ancho">
+          <label for="f-alumno">Alumno</label>
+          <select id="f-alumno" [(ngModel)]="alumnoFiltro" (ngModelChange)="filtrar()">
+            <option [ngValue]="null">Todos</option>
+            @for (a of listaAlumnos(); track a.id) {
+              <option [ngValue]="a.id">{{ a.codigoEstudiante }} · {{ a.persona.nombreCompleto }}</option>
+            }
+          </select>
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="mensaje mensaje-error" role="alert">{{ error() }}</p>
+  }
+
+  <div class="tarjeta">
+    @if (loading() && !pagina()) {
+      <p class="estado-carga">Consultando matrículas…</p>
+    } @else if (pagina(); as pg) {
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th><span class="visualmente-oculto">Detalle</span></th>
+              <th><button type="button" class="boton-orden" (click)="ordenarPor('id')">N.º {{ indicadorOrden('id') }}</button></th>
+              @if (esCoordinacion()) {
+                <th>Alumno</th>
+              }
+              <th>Periodo</th>
+              <th><button type="button" class="boton-orden" (click)="ordenarPor('fecha')">Fecha {{ indicadorOrden('fecha') }}</button></th>
+              <th><button type="button" class="boton-orden" (click)="ordenarPor('estado')">Estado {{ indicadorOrden('estado') }}</button></th>
+              <th class="col-num">Cursos</th>
+              <th class="col-num">Créditos</th>
+              <th>Cargo</th>
+              <th class="col-acciones"><span class="visualmente-oculto">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of pg.content; track m.id) {
+              <tr>
+                <td>
+                  <button
+                    type="button"
+                    class="boton boton-texto boton-pequeno"
+                    [attr.aria-expanded]="expandida() === m.id"
+                    (click)="alternar(m.id)"
+                  >
+                    @if (expandida() === m.id) {
+                      <svg lucideChevronDown aria-hidden="true"></svg>
+                    } @else {
+                      <svg lucideChevronRight aria-hidden="true"></svg>
+                    }
+                    <span class="visualmente-oculto">Ver cursos de la matrícula {{ m.id }}</span>
+                  </button>
+                </td>
+                <td class="celda-principal num">{{ m.id }}</td>
+                @if (esCoordinacion()) {
+                  <td>{{ alumno(m.estudianteId) }}</td>
+                }
+                <td>{{ codigoPeriodo(m.periodoId) }}</td>
+                <td class="num">{{ m.fecha | date: 'dd/MM/yyyy' }}</td>
+                <td><app-etiqueta-estado [estado]="m.estado" /></td>
+                <td class="col-num">{{ m.detalles.length }}</td>
+                <td class="col-num">{{ m.totalCreditos ?? '—' }}</td>
+                <td>
+                  @if (m.cargo; as c) {
+                    <span class="num">{{ c.montoTotal | currency: 'PEN' : 'S/' }}</span>
+                    <div><app-etiqueta-estado [estado]="c.estado" /></div>
+                  } @else {
+                    <span class="texto-secundario">Sin cargo</span>
+                  }
+                </td>
+                <td class="col-acciones">
+                  <a class="boton boton-texto boton-pequeno" [routerLink]="['/matricula/consulta', m.id]">
+                    <svg lucideEye aria-hidden="true"></svg>
+                    Detalle
+                  </a>
+                  <a class="boton boton-texto boton-pequeno" routerLink="/matricula/horario" [queryParams]="{ matriculaId: m.id }">
+                    <svg lucideCalendarDays aria-hidden="true"></svg>
+                    Horario
+                  </a>
+                  @if (esCoordinacion() && m.estado !== estadoAnulada) {
+                    <button type="button" class="boton boton-texto boton-pequeno boton-peligro" (click)="anular(m)">Anular</button>
+                  }
+                </td>
+              </tr>
+              @if (expandida() === m.id) {
+                <tr class="fila-detalle">
+                  <td></td>
+                  <td [attr.colspan]="esCoordinacion() ? 9 : 8">
+                    <table class="tabla tabla-interna">
+                      <thead>
+                        <tr>
+                          <th>Curso</th>
+                          <th>Sección</th>
+                          <th class="col-num">Créditos</th>
+                          <th>Resultado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (d of m.detalles; track d.id) {
+                          <tr>
+                            <td>{{ curso(d.cursoId) }}</td>
+                            <td>{{ grupo(d.seccionId) }}</td>
+                            <td class="col-num">{{ d.creditos ?? '—' }}</td>
+                            <td>
+                              @if (d.resultado) {
+                                <app-etiqueta-estado [estado]="d.resultado" />
+                              } @else {
+                                <span class="texto-secundario">Pendiente</span>
+                              }
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              }
+            } @empty {
+              <tr>
+                <td [attr.colspan]="esCoordinacion() ? 10 : 9">
+                  <div class="estado-vacio">
+                    <strong>No hay matrículas para este filtro</strong>
+                    @if (!esCoordinacion()) {
+                      Cuando registres tu matrícula aparecerá aquí.
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <footer class="paginador">
+        <span>
+          {{ pg.page.totalElements }} matrícula(s) · página {{ pg.page.totalPages ? pg.page.number + 1 : 0 }} de
+          {{ pg.page.totalPages }}
+        </span>
+        <span class="acciones">
+          <button type="button" class="boton boton-pequeno" [disabled]="pg.page.number === 0 || loading()" (click)="irAPagina(pg.page.number - 1)">
+            Anterior
+          </button>
+          <button
+            type="button"
+            class="boton boton-pequeno"
+            [disabled]="pg.page.number + 1 >= pg.page.totalPages || loading()"
+            (click)="irAPagina(pg.page.number + 1)"
+          >
+            Siguiente
+          </button>
+        </span>
+      </footer>
+    }
+  </div>
+</section>

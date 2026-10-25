@@ -1,0 +1,128 @@
+<section class="pagina">
+  <header class="encabezado-pagina">
+    <div>
+      <p class="migas">Gestión académica</p>
+      <h1>Secciones</h1>
+      <p class="descripcion">
+        Oferta por periodo: cada sección pertenece a un curso y a un periodo, con docente, vacantes y horario.
+      </p>
+    </div>
+    @if (puedeGestionar()) {
+      <a class="boton boton-primario" routerLink="/matricula/secciones/nueva">
+        <svg lucidePlus aria-hidden="true"></svg>
+        Nueva sección
+      </a>
+    }
+  </header>
+
+  <div class="tarjeta">
+    <div class="cuerpo">
+      <div class="barra-filtros">
+        <div class="campo">
+          <label for="f-periodo">Periodo</label>
+          <select id="f-periodo" [(ngModel)]="periodoFiltro" (ngModelChange)="cargar()">
+            <option [ngValue]="null">Todos</option>
+            @for (periodo of periodos(); track periodo.id) {
+              <option [ngValue]="periodo.id">{{ periodo.codigo }} · {{ periodo.estado }}</option>
+            }
+          </select>
+        </div>
+        <div class="campo">
+          <label for="f-curso">Curso</label>
+          <select id="f-curso" [(ngModel)]="cursoFiltro" (ngModelChange)="cargar()">
+            <option [ngValue]="null">Todos</option>
+            @for (curso of cursos(); track curso.id) {
+              <option [ngValue]="curso.id">{{ curso.codigo }} · {{ curso.nombre }}</option>
+            }
+          </select>
+        </div>
+        <div class="campo">
+          <label for="f-estado">Estado</label>
+          <select id="f-estado" [(ngModel)]="estadoFiltro" (ngModelChange)="cargar()">
+            <option [ngValue]="null">Todos</option>
+            @for (estado of estados; track estado) {
+              <option [ngValue]="estado">{{ estado }}</option>
+            }
+          </select>
+        </div>
+        <label class="casilla">
+          <input type="checkbox" [(ngModel)]="soloConVacantes" (ngModelChange)="cargar()" />
+          Solo con vacantes
+        </label>
+      </div>
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="mensaje mensaje-error" role="alert">{{ error() }}</p>
+  }
+
+  <div class="tarjeta">
+    @if (loading()) {
+      <p class="estado-carga">Cargando secciones…</p>
+    } @else {
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Curso</th>
+              <th>Grupo</th>
+              <th>Periodo</th>
+              <th>Docente</th>
+              <th>Horario</th>
+              <th class="col-num">Vacantes</th>
+              <th>Estado</th>
+              @if (puedeGestionar()) {
+                <th class="col-acciones"><span class="visualmente-oculto">Acciones</span></th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (seccion of secciones(); track seccion.id) {
+              <tr>
+                <td>
+                  <span class="celda-principal">{{ seccion.curso.codigo }}</span>
+                  <div class="texto-secundario texto-pequeno">{{ seccion.curso.nombre }} · {{ seccion.curso.creditos }} cr.</div>
+                </td>
+                <td>{{ seccion.grupo }}</td>
+                <td>{{ codigoPeriodo(seccion.periodoId) }}</td>
+                <td>{{ seccion.docenteNombre ?? 'Sin asignar' }}</td>
+                <td class="texto-pequeno">{{ resumenHorario(seccion.horarios) || 'Sin horario' }}</td>
+                <td class="col-num">
+                  <span class="num">{{ seccion.cuposOcupados }}/{{ seccion.limiteVacantes }}</span>
+                  <div class="barra" [class.llena]="seccion.vacantesDisponibles === 0">
+                    <span [style.width.%]="ocupacion(seccion)"></span>
+                  </div>
+                </td>
+                <td><app-etiqueta-estado [estado]="seccion.estado" /></td>
+                @if (puedeGestionar()) {
+                  <td class="col-acciones">
+                    <a class="boton boton-texto boton-pequeno" [routerLink]="['/matricula/secciones', seccion.id, 'editar']">
+                      <svg lucidePencil aria-hidden="true"></svg>
+                      Editar
+                    </a>
+                    <button type="button" class="boton boton-texto boton-pequeno boton-peligro" (click)="eliminar(seccion)">
+                      <svg lucideTrash aria-hidden="true"></svg>
+                      Eliminar
+                    </button>
+                  </td>
+                }
+              </tr>
+            } @empty {
+              @if (!error()) {
+                <tr>
+                  <td colspan="8">
+                    <div class="estado-vacio">
+                      <strong>No hay secciones para este filtro</strong>
+                      Cambia el periodo, el curso o el estado.
+                    </div>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</section>

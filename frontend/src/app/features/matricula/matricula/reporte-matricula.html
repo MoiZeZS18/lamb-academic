@@ -1,0 +1,154 @@
+<section class="pagina">
+  <header class="encabezado-pagina">
+    <div>
+      <p class="migas">Gestión académica</p>
+      <h1>Reportes de matrícula</h1>
+      <p class="descripcion">Indicadores del periodo {{ codigoPeriodo() }} calculados por el backend con los datos de Oracle.</p>
+    </div>
+    <div class="acciones no-imprimir">
+      <div class="campo">
+        <label for="periodo" class="visualmente-oculto">Periodo</label>
+        <select id="periodo" [(ngModel)]="periodoFiltro" (ngModelChange)="cargar()">
+          @for (p of periodos(); track p.id) {
+            <option [ngValue]="p.id">{{ p.codigo }} · {{ p.estado }}</option>
+          }
+        </select>
+      </div>
+      <button type="button" class="boton" (click)="imprimir()">
+        <svg lucidePrinter aria-hidden="true"></svg>
+        Imprimir
+      </button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <p class="mensaje mensaje-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="estado-carga">Generando reportes…</p>
+  } @else if (total(); as t) {
+    <div class="tarjeta">
+      <div class="cuerpo rejilla rejilla-3">
+        <div class="indicador">
+          <span class="valor">{{ t.totalMatriculas }}</span>
+          <span class="etiqueta">Matrículas del periodo</span>
+        </div>
+        <div class="indicador">
+          <span class="valor">{{ t.totalDetalles }}</span>
+          <span class="etiqueta">Inscripciones a cursos</span>
+        </div>
+        <div class="indicador">
+          <span class="valor">{{ cursosPorMatricula() | number: '1.1-1' }}</span>
+          <span class="etiqueta">Cursos por matrícula</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="rejilla rejilla-2">
+      <article class="tarjeta">
+        <header><h2>Matrículas por estado</h2></header>
+        <div class="tabla-contenedor">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th>Estado</th>
+                <th class="col-num">Matrículas</th>
+                <th class="col-num">Cursos</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (fila of porEstado(); track fila.estado) {
+                <tr>
+                  <td><app-etiqueta-estado [estado]="fila.estado" /></td>
+                  <td class="col-num num">{{ fila.reporte.totalMatriculas }}</td>
+                  <td class="col-num num">{{ fila.reporte.totalDetalles }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="tarjeta">
+        <header><h2>Cargos de matrícula y otros</h2></header>
+        <div class="tabla-contenedor">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th>Estado</th>
+                <th class="col-num">Cargos</th>
+                <th class="col-num">Monto</th>
+                <th class="col-num">Saldo</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of cargos(); track c.estado) {
+                <tr>
+                  <td><app-etiqueta-estado [estado]="c.estado" /></td>
+                  <td class="col-num num">{{ c.cantidad }}</td>
+                  <td class="col-num num">{{ c.montoTotal | currency: 'PEN' : 'S/' }}</td>
+                  <td class="col-num num">{{ c.saldoPendiente | currency: 'PEN' : 'S/' }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4"><div class="estado-vacio">Sin cargos emitidos en el periodo.</div></td>
+                </tr>
+              }
+            </tbody>
+            @if (cargos().length) {
+              <tfoot>
+                <tr>
+                  <td>Total</td>
+                  <td class="col-num num">{{ totalesCargos().cantidad }}</td>
+                  <td class="col-num num">{{ totalesCargos().monto | currency: 'PEN' : 'S/' }}</td>
+                  <td class="col-num num">{{ totalesCargos().saldo | currency: 'PEN' : 'S/' }}</td>
+                </tr>
+              </tfoot>
+            }
+          </table>
+        </div>
+      </article>
+    </div>
+
+    <article class="tarjeta">
+      <header><h2>Ocupación de vacantes por curso</h2></header>
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Curso</th>
+              <th class="col-num">Secciones</th>
+              <th class="col-num">Ocupados / vacantes</th>
+              <th>Ocupación</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (o of ocupacion(); track o.cursoCodigo) {
+              <tr>
+                <td>
+                  <span class="celda-principal">{{ o.cursoCodigo }}</span>
+                  <span class="texto-secundario"> · {{ o.cursoNombre }}</span>
+                </td>
+                <td class="col-num num">{{ o.secciones }}</td>
+                <td class="col-num num">{{ o.cuposOcupados }} / {{ o.vacantesTotales }}</td>
+                <td>
+                  <div class="ocupacion">
+                    <div class="barra" [class.llena]="porcentaje(o) >= 100">
+                      <span [style.width.%]="porcentaje(o)"></span>
+                    </div>
+                    <span class="num texto-pequeno">{{ porcentaje(o) }} %</span>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="4"><div class="estado-vacio">El periodo no tiene secciones programadas.</div></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </article>
+  }
+</section>

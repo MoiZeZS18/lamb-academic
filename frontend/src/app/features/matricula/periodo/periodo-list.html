@@ -1,0 +1,78 @@
+<section class="pagina">
+  <header class="encabezado-pagina">
+    <div>
+      <p class="migas">Gestión académica</p>
+      <h1>Periodos académicos</h1>
+      <p class="descripcion">
+        Solo un periodo en estado Activo admite matrículas. Un periodo Cerrado conserva su historia académica.
+      </p>
+    </div>
+    @if (auth.tieneRol(rolAdmin)) {
+      <a class="boton boton-primario" routerLink="/matricula/periodos/nuevo">
+        <svg lucidePlus aria-hidden="true"></svg>
+        Nuevo periodo
+      </a>
+    }
+  </header>
+
+  @if (error()) {
+    <p class="mensaje mensaje-error" role="alert">{{ error() }}</p>
+  }
+
+  <div class="tarjeta">
+    @if (loading()) {
+      <p class="estado-carga">Cargando periodos…</p>
+    } @else {
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nombre</th>
+              <th>Inicio</th>
+              <th>Fin</th>
+              <th>Estado</th>
+              @if (auth.tieneRol(rolAdmin)) {
+                <th class="col-acciones"><span class="visualmente-oculto">Acciones</span></th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (periodo of periodos(); track periodo.id) {
+              <tr>
+                <td class="celda-principal">{{ periodo.codigo }}</td>
+                <td>{{ periodo.nombre }}</td>
+                <td class="num">{{ periodo.fechaInicio | date: 'dd/MM/yyyy' }}</td>
+                <td class="num">{{ periodo.fechaFin | date: 'dd/MM/yyyy' }}</td>
+                <td><app-etiqueta-estado [estado]="periodo.estado" /></td>
+                @if (auth.tieneRol(rolAdmin)) {
+                  <td class="col-acciones">
+                    <a class="boton boton-texto boton-pequeno" [routerLink]="['/matricula/periodos', periodo.id, 'editar']">
+                      <svg lucidePencil aria-hidden="true"></svg>
+                      Editar
+                    </a>
+                    <button type="button" class="boton boton-texto boton-pequeno boton-peligro" (click)="eliminar(periodo)">
+                      <svg lucideTrash aria-hidden="true"></svg>
+                      Eliminar
+                    </button>
+                  </td>
+                }
+              </tr>
+            } @empty {
+              @if (!error()) {
+                <tr>
+                  <td colspan="6">
+                    <div class="estado-vacio">
+                      <strong>No hay periodos registrados</strong>
+                      Un administrador debe crear el primer periodo académico.
+                    </div>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</section>

@@ -1,0 +1,33 @@
+.horarios {
+  margin: 0;
+  padding: 0.875rem 1rem 1rem;
+  border: var(--lamb-borde);
+  border-radius: var(--lamb-radio);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.horarios legend {
+  padding: 0 0.375rem;
+  font-weight: 600;
+  color: var(--lamb-marino-800);
+}
+
+.horarios .tabla-contenedor {
+  width: 100%;
+}
+
+.tabla-horarios td {
+  padding: 0.375rem 0.5rem;
+}
+
+.lista-horarios {
+  margin: 0;
+  padding-left: 1.125rem;
+}
+
+.separador {
+  flex: 1;
+}

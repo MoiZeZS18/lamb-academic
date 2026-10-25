@@ -1,0 +1,203 @@
+<section class="pagina">
+  <header class="encabezado-pagina">
+    <div>
+      <p class="migas"><a routerLink="/matricula/secciones">Secciones</a></p>
+      <h1>{{ id() ? 'Editar sección' : 'Nueva sección' }}</h1>
+      @if (seccion(); as s) {
+        <p class="descripcion">
+          {{ s.curso.codigo }} · {{ s.curso.nombre }}, grupo {{ s.grupo }} ·
+          {{ s.cuposOcupados }} matriculados de {{ s.limiteVacantes }}
+        </p>
+      }
+    </div>
+    @if (seccion(); as s) {
+      <app-etiqueta-estado [estado]="s.estado" />
+    }
+  </header>
+
+  @if (!id() && cursosCargados() && cursosFiltrados().length === 0 && !cursoBusqueda()) {
+    <p class="mensaje mensaje-alerta" role="alert">
+      No hay cursos activos registrados en Core Académico. Una sección necesita un curso: solicita su registro antes
+      de programarla.
+    </p>
+  }
+  @if (!id() && periodosCargados() && periodosAbiertos().length === 0) {
+    <p class="mensaje mensaje-alerta" role="alert">
+      No hay periodos planificados ni activos.
+      @if (auth.tieneRol(rolAdmin)) {
+        <a routerLink="/matricula/periodos/nuevo">Crea un periodo primero</a>.
+      } @else {
+        Solicita a la administración que cree el periodo.
+      }
+    </p>
+  }
+
+  <form class="tarjeta" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+    <div class="cuerpo formulario">
+      @if (loading() && id() && !seccion()) {
+        <p class="estado-carga">Cargando sección…</p>
+      }
+      @if (error()) {
+        <p class="mensaje mensaje-error" role="alert">{{ error() }}</p>
+      }
+
+      <div class="campos">
+        <div class="campo">
+          <label for="curso">Curso <span class="obligatorio">*</span></label>
+          <input
+            id="curso"
+            type="text"
+            [matAutocomplete]="autoCurso"
+            [value]="cursoBusqueda()"
+            [disabled]="!!id()"
+            (input)="buscarCurso($any($event.target).value)"
+            (blur)="form.controls.cursoId.markAsTouched()"
+            placeholder="Escribe código o nombre"
+            autocomplete="off"
+          />
+          <mat-autocomplete #autoCurso="matAutocomplete" (optionSelected)="onCursoSeleccionado($event)">
+            @for (curso of cursosFiltrados(); track curso.id) {
+              <mat-option [value]="etiquetaCurso(curso)">
+                <strong>{{ curso.codigo }}</strong> · {{ curso.nombre }}
+                <span class="texto-secundario"> · {{ curso.creditos }} cr.</span>
+              </mat-option>
+            }
+          </mat-autocomplete>
+          @if (mensajeValidacion('cursoId'); as m) {
+            <span class="error-campo">{{ m }}</span>
+          }
+        </div>
+        <div class="campo">
+          <label for="periodo">Periodo <span class="obligatorio">*</span></label>
+          <select id="periodo" formControlName="periodoId">
+            <option [ngValue]="0" disabled>Selecciona un periodo</option>
+            @for (periodo of id() ? periodos() : periodosAbiertos(); track periodo.id) {
+              <option [ngValue]="periodo.id">{{ periodo.codigo }} · {{ periodo.estado }}</option>
+            }
+          </select>
+          @if (mensajeValidacion('periodoId'); as m) {
+            <span class="error-campo">{{ m }}</span>
+          }
+        </div>
+      </div>
+
+      <div class="campos">
+        <div class="campo">
+          <label for="grupo">Grupo <span class="obligatorio">*</span></label>
+          <input id="grupo" type="text" formControlName="grupo" maxlength="10" placeholder="A" />
+          @if (mensajeValidacion('grupo'); as m) {
+            <span class="error-campo">{{ m }}</span>
+          }
+        </div>
+        <div class="campo">
+          <label for="docente">Docente</label>
+          <select id="docente" formControlName="docenteId">
+            <option [ngValue]="null">Sin asignar</option>
+            @for (docente of docentes(); track docente.id) {
+              <option [ngValue]="docente.id">{{ docente.nombreCompleto }}</option>
+            }
+          </select>
+        </div>
+        <div class="campo">
+          <label for="vacantes">Límite de vacantes <span class="obligatorio">*</span></label>
+          <input id="vacantes" type="number" min="1" max="200" step="1" formControlName="limiteVacantes" />
+          @if (mensajeValidacion('limiteVacantes'); as m) {
+            <span class="error-campo">{{ m }}</span>
+          } @else if (seccion(); as s) {
+            <span class="ayuda">No puede ser menor que los {{ s.cuposOcupados }} matriculados.</span>
+          }
+        </div>
+      </div>
+
+      <fieldset class="horarios">
+        <legend>Horario y aula</legend>
+        @if (id()) {
+          @if (seccion(); as s) {
+            <ul class="lista-horarios">
+              @for (h of s.horarios; track h.id) {
+                <li>{{ nombreDia[h.diaSemana] }} {{ h.horaInicio }}–{{ h.horaFin }} · aula {{ h.aula }}</li>
+              } @empty {
+                <li class="texto-secundario">Sin horario registrado.</li>
+              }
+            </ul>
+            <p class="ayuda texto-secundario texto-pequeno">El horario se define al programar la sección.</p>
+          }
+        } @else {
+          <div class="tabla-contenedor">
+            <table class="tabla tabla-horarios" formArrayName="horarios">
+              <thead>
+                <tr>
+                  <th>Día</th>
+                  <th>Inicio</th>
+                  <th>Fin</th>
+                  <th>Aula</th>
+                  <th><span class="visualmente-oculto">Quitar</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (linea of horariosForm.controls; track linea; let i = $index) {
+                  <tr [formGroupName]="i">
+                    <td>
+                      <select formControlName="diaSemana" [attr.aria-label]="'Día de la línea ' + (i + 1)">
+                        @for (dia of dias; track dia) {
+                          <option [ngValue]="dia">{{ nombreDia[dia] }}</option>
+                        }
+                      </select>
+                    </td>
+                    <td><input type="time" formControlName="horaInicio" step="900" [attr.aria-label]="'Inicio de la línea ' + (i + 1)" /></td>
+                    <td><input type="time" formControlName="horaFin" step="900" [attr.aria-label]="'Fin de la línea ' + (i + 1)" /></td>
+                    <td><input type="text" formControlName="aula" maxlength="50" placeholder="A-101" [attr.aria-label]="'Aula de la línea ' + (i + 1)" /></td>
+                    <td class="col-acciones">
+                      <button type="button" class="boton boton-texto boton-pequeno" (click)="quitarHorario(i)">
+                        <svg lucideX aria-hidden="true"></svg>
+                        <span class="visualmente-oculto">Quitar línea {{ i + 1 }}</span>
+                      </button>
+                    </td>
+                  </tr>
+                  @if (errorHorario(i); as m) {
+                    <tr>
+                      <td colspan="5" class="error-campo">Línea {{ i + 1 }}: {{ m }}</td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+          @if (horariosForm.errors?.['cruce']; as cruce) {
+            <p class="error-campo">{{ cruce }}</p>
+          }
+          @if (horariosForm.length === 0) {
+            <p class="texto-secundario texto-pequeno">Sin horario: la sección no aparecerá en el horario semanal.</p>
+          }
+          <button type="button" class="boton boton-pequeno" (click)="agregarHorario()">
+            <svg lucidePlus aria-hidden="true"></svg>
+            Agregar horario
+          </button>
+        }
+      </fieldset>
+    </div>
+
+    <footer class="acciones">
+      <button
+        type="submit"
+        class="boton boton-primario"
+        [disabled]="loading() || errorCarga() || (!id() && (cursosFiltrados().length === 0 && !cursoBusqueda() || periodosAbiertos().length === 0))"
+      >
+        Guardar
+      </button>
+      <button type="button" class="boton" (click)="cancelar()">Cancelar</button>
+      @if (seccion(); as s) {
+        <span class="separador"></span>
+        @if (s.estado === 'ABIERTA') {
+          <button type="button" class="boton" (click)="cambiarEstado('CERRADA')">Cerrar inscripción</button>
+        }
+        @if (s.estado === 'CERRADA') {
+          <button type="button" class="boton" (click)="cambiarEstado('ABIERTA')">Reabrir inscripción</button>
+        }
+        @if (s.estado !== 'CANCELADA') {
+          <button type="button" class="boton boton-peligro" (click)="cambiarEstado('CANCELADA')">Cancelar sección</button>
+        }
+      }
+    </footer>
+  </form>
+</section>
