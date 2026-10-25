@@ -17,8 +17,12 @@ import random
 import subprocess
 import sys
 import threading
+import time
 import urllib.error
 import urllib.request
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import keycloak_pkce  # noqa: E402  (U2: el backend exige un token de Keycloak)
 
 BASE = "http://localhost:8080"
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
@@ -100,10 +104,30 @@ COMMIT;
 
 # ------------------------------------ HTTP ------------------------------------
 
+# U2: las pruebas operan como ADMIN (el unico rol con acceso a todos los modulos). El token se obtiene
+# con Authorization Code + PKCE (keycloak_pkce.py) y se renueva con el refresh_token antes de vencer.
+_sesion = {"tokens": None, "vence": 0.0}
+_candado_token = threading.Lock()
+
+
+def token_admin():
+    with _candado_token:
+        if _sesion["tokens"] is None:
+            _sesion["tokens"] = keycloak_pkce.login("admin.lamb")
+        elif time.time() > _sesion["vence"] - 30:
+            estado, nuevos = keycloak_pkce.refrescar(_sesion["tokens"]["refresh_token"])
+            _sesion["tokens"] = nuevos if estado == 200 else keycloak_pkce.login("admin.lamb")
+        else:
+            return _sesion["tokens"]["access_token"]
+        _sesion["vence"] = time.time() + _sesion["tokens"]["expires_in"]
+        return _sesion["tokens"]["access_token"]
+
+
 def llamar(metodo, ruta, cuerpo=None, headers=None):
     datos = json.dumps(cuerpo).encode("utf-8") if cuerpo is not None else None
     req = urllib.request.Request(BASE + ruta, data=datos, method=metodo)
     req.add_header("Content-Type", "application/json")
+    req.add_header("Authorization", f"Bearer {token_admin()}")
     for k, v in (headers or {}).items():
         req.add_header(k, v)
     try:

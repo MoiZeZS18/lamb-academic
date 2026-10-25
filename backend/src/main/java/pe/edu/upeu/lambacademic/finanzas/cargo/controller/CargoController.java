@@ -1,5 +1,8 @@
 package pe.edu.upeu.lambacademic.finanzas.cargo.controller;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import pe.edu.upeu.lambacademic.compartido.seguridad.IdentidadToken;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -53,21 +56,27 @@ public class CargoController {
         return service.buscar(estudianteId, periodoId, estado, procesoOrigen, sortBy, dir);
     }
 
+    /* [U2] Un ESTUDIANTE solo consulta sus propios cargos (claim alumno_id); el personal, todos. */
+
     @Operation(summary = "Consulta un cargo con el detalle de cuotas")
     @GetMapping("/{id}")
-    public CargoResponse obtener(@PathVariable Long id) {
-        return service.obtener(id);
+    public CargoResponse obtener(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        CargoResponse cargo = service.obtener(id);
+        IdentidadToken.exigirPropio(IdentidadToken.estudianteRestringido(jwt), cargo.estudianteId(), "los datos del cargo");
+        return cargo;
     }
 
     @Operation(summary = "Lista los cargos de un estudiante con sus cuotas")
     @GetMapping("/estudiante/{estudianteId}")
-    public List<CargoResponse> listarDeEstudiante(@PathVariable Long estudianteId) {
+    public List<CargoResponse> listarDeEstudiante(@PathVariable Long estudianteId, @AuthenticationPrincipal Jwt jwt) {
+        IdentidadToken.exigirPropio(IdentidadToken.estudianteRestringido(jwt), estudianteId, "los cargos");
         return service.listarDeEstudiante(estudianteId);
     }
 
     @Operation(summary = "Saldo consolidado del estudiante")
     @GetMapping("/estudiante/{estudianteId}/saldo")
-    public SaldoEstudianteResponse saldo(@PathVariable Long estudianteId) {
+    public SaldoEstudianteResponse saldo(@PathVariable Long estudianteId, @AuthenticationPrincipal Jwt jwt) {
+        IdentidadToken.exigirPropio(IdentidadToken.estudianteRestringido(jwt), estudianteId, "la cuenta");
         return service.saldoDeEstudiante(estudianteId);
     }
 
@@ -86,7 +95,11 @@ public class CargoController {
 
     @Operation(summary = "Lista los pagos de un cargo")
     @GetMapping("/{id}/pagos")
-    public List<PagoResponse> listarPagos(@PathVariable Long id) {
+    public List<PagoResponse> listarPagos(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        Long propio = IdentidadToken.estudianteRestringido(jwt);
+        if (propio != null) {
+            IdentidadToken.exigirPropio(propio, service.obtener(id).estudianteId(), "los pagos");
+        }
         return service.listarPagos(id);
     }
 

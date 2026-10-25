@@ -1,33 +1,39 @@
 package pe.edu.upeu.lambacademic;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 /**
- * CORS para el futuro frontend (S5 3.7). Los origenes permitidos vienen de la propiedad
- * lamb.cors.allowed-origins (lista separada por comas), no estan fijos en el codigo.
+ * CORS como bean que Spring Security usa (S11 3.1b). La version de S5 (WebMvcConfigurer) nunca
+ * llegaba a ejecutarse: el preflight OPTIONS no lleva Authorization y Security lo rechazaba antes.
+ * Los origenes siguen viniendo de lamb.cors.allowed-origins (lista separada por comas, nunca "*").
  */
 @Configuration
-public class CorsConfig implements WebMvcConfigurer {
+public class CorsConfig {
 
     @Value("${lamb.cors.allowed-origins}")
     private String allowedOrigins;
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        String[] origins = Arrays.stream(allowedOrigins.split(","))
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuracion = new CorsConfiguration();
+        configuracion.setAllowedOrigins(Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim)
                 .filter(origen -> !origen.isEmpty())
-                .toArray(String[]::new);
+                .toList());
+        configuracion.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuracion.setAllowedHeaders(List.of("*"));
+        configuracion.setExposedHeaders(List.of("X-Trace-ID"));
 
-        registry.addMapping("/api/**")
-                .allowedOrigins(origins)
-                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-                .allowedHeaders("*")
-                .exposedHeaders("X-Trace-ID");
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", configuracion);
+        return source;
     }
 }

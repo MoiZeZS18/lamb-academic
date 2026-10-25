@@ -8,7 +8,7 @@
 #
 # Reglas:
 #  1. No se permite preparar archivos .env (salvo *.env.example), respaldos .dmp ni infra/backups/.
-#  2. Ningun valor de las claves *PASSWORD* de backend/.env e infra/.env puede aparecer en las
+#  2. Ningun valor de las claves *PASSWORD* de backend/.env, infra/.env e infra/secretos/*.env puede aparecer en las
 #     lineas agregadas. Los valores se leen en el momento del commit: nunca se guardan en el repo.
 #  3. En archivos de configuracion no se permiten claves literales (password: valor). Se aceptan
 #     referencias ${VARIABLE}, marcadores <...> y valores vacios.
@@ -38,7 +38,7 @@ agregadas() {
 }
 
 # Regla 2: valores reales de los .env locales
-for envf in "$raiz/backend/.env" "$raiz/infra/.env"; do
+for envf in "$raiz/backend/.env" "$raiz/infra/.env" "$raiz"/infra/secretos/*.env; do
   [ -f "$envf" ] || continue
   origen="${envf#$raiz/}"
   while IFS='=' read -r clave valor || [ -n "$clave" ]; do

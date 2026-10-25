@@ -17,3 +17,6 @@ backend/logs/
 
 # Copia duplicada del proyecto encontrada en la auditoria (ver ESTADO_INTEGRACION.md)
 /lamb-academic/
+
+# Python
+__pycache__/

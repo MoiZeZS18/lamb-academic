@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pe.edu.upeu.lambacademic.compartido.seguridad.IdentidadToken;
 
 import pe.edu.upeu.lambacademic.exception.ReglaNegocioException;
 import pe.edu.upeu.lambacademic.exception.ResourceNotFoundException;
@@ -125,7 +126,18 @@ public class MatriculaService {
 
     @Transactional(readOnly = true)
     public MatriculaResponse obtener(Long id) {
-        return conCargoConsultado(matriculaMapper.toResponse(buscarOFallar(id)));
+        return obtener(id, null);
+    }
+
+    /**
+     * [U2] estudianteRestringido = null: personal (sin filtro). Con valor: el ALUMNOS.ID del token;
+     * la matricula de otro alumno responde 403 (existe, pero no es suya), no 404.
+     */
+    @Transactional(readOnly = true)
+    public MatriculaResponse obtener(Long id, Long estudianteRestringido) {
+        Matricula matricula = buscarOFallar(id);
+        IdentidadToken.exigirPropio(estudianteRestringido, matricula.getEstudianteId(), "la matricula");
+        return conCargoConsultado(matriculaMapper.toResponse(matricula));
     }
 
     @Transactional

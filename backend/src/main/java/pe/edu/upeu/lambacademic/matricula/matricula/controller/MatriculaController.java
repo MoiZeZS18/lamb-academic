@@ -8,7 +8,11 @@ import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+
+import pe.edu.upeu.lambacademic.compartido.seguridad.IdentidadToken;
 
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaResponse;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaRegistroRequest;
@@ -28,12 +32,21 @@ public class MatriculaController {
 
     private final MatriculaService matriculaService;
 
+    /*
+     * [U2, S10b 7.3] Un ESTUDIANTE solo opera sobre su propia matricula: su ALUMNOS.ID sale del
+     * claim alumno_id del token ya validado, nunca de un campo que el cliente pueda cambiar.
+     * COORDINADOR / ADMIN no tienen esa restriccion (estudianteRestringido devuelve null).
+     */
+
     @Operation(summary = "Registra una matricula con sus secciones, reserva cupos y genera el cargo financiero")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public MatriculaResponse registrar(
-            @Valid @RequestBody MatriculaRegistroRequest request) {
+            @Valid @RequestBody MatriculaRegistroRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
 
+        IdentidadToken.exigirPropio(IdentidadToken.estudianteRestringido(jwt),
+                request.matricula().estudianteId(), "la matricula");
         return matriculaService.registrar(
                 request.matricula(),
                 request.detalles()
@@ -49,8 +62,15 @@ public class MatriculaController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "fecha") String sortBy,
-            @RequestParam(defaultValue = "desc") String direction) {
+            @RequestParam(defaultValue = "desc") String direction,
+            @AuthenticationPrincipal Jwt jwt) {
 
+        Long propio = IdentidadToken.estudianteRestringido(jwt);
+        if (propio != null) {
+            // Pedir expresamente las de otro alumno es un 403; sin filtro, solo se listan las propias.
+            IdentidadToken.exigirPropio(propio, estudianteId == null ? propio : estudianteId, "las matriculas");
+            estudianteId = propio;
+        }
         return matriculaService.buscar(estudianteId, periodoId, estado, page, size, sortBy, direction);
     }
 
@@ -76,8 +96,8 @@ public class MatriculaController {
 
     @Operation(summary = "Consulta una matricula con sus detalles")
     @GetMapping("/{id}")
-    public MatriculaResponse obtener(@PathVariable Long id) {
-        return matriculaService.obtener(id);
+    public MatriculaResponse obtener(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        return matriculaService.obtener(id, IdentidadToken.estudianteRestringido(jwt));
     }
 
     @Operation(summary = "Anula una matricula: libera cupos y anula su cargo (si no tiene pagos)")

@@ -43,6 +43,12 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getMessage(), req, null);
     }
 
+    @ExceptionHandler(AccesoDenegadoException.class)
+    public ResponseEntity<ErrorResponse> handleAccesoDenegado(AccesoDenegadoException ex, HttpServletRequest req) {
+        log.warn("Acceso denegado: {}", ex.getMessage());
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), req, null);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest req) {
         Map<String, String> errores = new LinkedHashMap<>();
@@ -104,8 +110,13 @@ public class GlobalExceptionHandler {
 
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, HttpServletRequest req,
                                                 Map<String, String> errores) {
-        ErrorResponse body = new ErrorResponse(Instant.now(), status.value(), status.getReasonPhrase(),
+        return ResponseEntity.status(status).body(cuerpo(status, message, req, errores));
+    }
+
+    /** Mismo formato de error para los 401/403 que responde Spring Security (SecurityConfig). */
+    public static ErrorResponse cuerpo(HttpStatus status, String message, HttpServletRequest req,
+                                       Map<String, String> errores) {
+        return new ErrorResponse(Instant.now(), status.value(), status.getReasonPhrase(),
                 message, req.getRequestURI(), MDC.get("traceId"), errores);
-        return ResponseEntity.status(status).body(body);
     }
 }

@@ -28,5 +28,55 @@ services:
     volumes:
       - oracle-data:/opt/oracle/oradata
 
+  # Keycloak (S10b): proveedor de identidad en contenedor aparte, con su propio Postgres.
+  # No comparte nada con Oracle: el backend solo lo conoce por issuer-uri.
+  # Levantar solo estos dos servicios: docker compose -f compose-dev.yml up -d keycloak-db keycloak
+  keycloak-db:
+    image: postgres:17-alpine
+    container_name: lamb-academic-keycloak-db
+    restart: unless-stopped
+    ports:
+      # Solo para inspeccion local (psql); Keycloak usa la red interna de Compose.
+      - "127.0.0.1:45432:5432"
+    environment:
+      POSTGRES_DB: lamb_keycloak
+      POSTGRES_USER: lamb_keycloak
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD:?Defina KC_DB_PASSWORD en infra/.env}
+    volumes:
+      - keycloak-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lamb_keycloak -d lamb_keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.0
+    container_name: lamb-academic-keycloak
+    restart: unless-stopped
+    # --import-realm solo importa el realm si todavia no existe (no pisa cambios hechos despues).
+    command: start-dev --import-realm
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    ports:
+      # 48080: el backend ya usa 8080; el prefijo 4 distingue a LAMB de BomERP (38080).
+      - "127.0.0.1:48080:8080"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:?Defina KC_ADMIN_PASSWORD en infra/.env}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/lamb_keycloak
+      KC_DB_USERNAME: lamb_keycloak
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:?Defina KC_DB_PASSWORD en infra/.env}
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+      - ./keycloak/realm:/opt/keycloak/data/import:ro
+      - ./keycloak/themes/lamb:/opt/keycloak/themes/lamb:ro
+
 volumes:
   oracle-data:
+  keycloak-data:
+  keycloak-db-data:

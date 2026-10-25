@@ -1,0 +1,73 @@
+{
+  "realm": "lamb-academic",
+  "displayName": "LAMB Academic",
+  "displayNameHtml": "<span class=\"lamb-marca\">LAMB <strong>Academic</strong></span>",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "editUsernameAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "loginTheme": "lamb",
+  "internationalizationEnabled": true,
+  "supportedLocales": ["es"],
+  "defaultLocale": "es",
+  "roles": {
+    "realm": [
+      { "name": "ESTUDIANTE", "description": "Alumno: consulta y registra solo su propia matricula" },
+      { "name": "COORDINADOR", "description": "Coordinacion academica: secciones, matriculas de cualquier alumno, anulacion y resultados" },
+      { "name": "ADMIN", "description": "Administracion: todo lo anterior mas periodos y datos maestros" },
+      { "name": "CAJERO", "description": "Caja: cargos y pagos de Finanzas" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "lamb-frontend",
+      "name": "LAMB Academic SPA",
+      "description": "SPA Angular: cliente publico, Authorization Code + PKCE (S11)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "rootUrl": "",
+      "baseUrl": "http://localhost:4200/",
+      "redirectUris": ["http://localhost:4200/*"],
+      "webOrigins": ["http://localhost:4200"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:4200/*"
+      },
+      "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "basic", "email"],
+      "optionalClientScopes": ["address", "phone", "offline_access", "microprofile-jwt"],
+      "protocolMappers": [
+        {
+          "name": "alumno_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "alumnoId",
+            "claim.name": "alumno_id",
+            "jsonType.label": "long",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true",
+            "multivalued": "false"
+          }
+        }
+      ]
+    }
+  ]
+}

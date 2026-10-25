@@ -5,6 +5,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.MDC;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -14,8 +16,10 @@ import java.util.UUID;
 /**
  * Trazabilidad por peticion: usa el header X-Trace-ID o genera un UUID, lo guarda en el MDC
  * (cada linea de log lo incluye, ver logback-spring.xml) y lo devuelve en la respuesta.
+ * Corre antes que Spring Security: asi los 401/403 tambien llevan su traceId.
  */
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class CorrelationIdFilter extends OncePerRequestFilter {
 
     public static final String TRACE_ID_HEADER = "X-Trace-ID";

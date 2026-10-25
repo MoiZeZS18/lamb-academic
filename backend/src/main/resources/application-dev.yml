@@ -20,6 +20,13 @@ spring:
           fetch_size: 100
     show-sql: false
 
+  # Keycloak (S10b 7.1): issuer-uri valida firma (JWKS del realm) y que el claim iss coincida.
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${LAMB_KEYCLOAK_ISSUER:http://localhost:48080/realms/lamb-academic}
+
   devtools:
     restart:
       enabled: true

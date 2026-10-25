@@ -11,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.mapstruct.factory.Mappers;
+import pe.edu.upeu.lambacademic.exception.AccesoDenegadoException;
 import pe.edu.upeu.lambacademic.exception.ReglaNegocioException;
 import pe.edu.upeu.lambacademic.exception.ResourceNotFoundException;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.DetalleMatriculaRequest;
@@ -326,6 +327,18 @@ class MatriculaServiceTest {
         assertThat(respuesta.cargo().montoTotal()).isEqualByComparingTo("700.00");
         assertThat(respuesta.cargo().estado()).isEqualTo("PAGADO_PARCIAL");
         verify(cargoPort, never()).generarCargo(anyLong(), anyLong(), anyLong(), anyString(), anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("[U2] Un estudiante no ve la matricula de otro: 403, no 404 (ABAC, S10b 7.3)")
+    void obtenerMatriculaAjenaComoEstudiante() {
+        when(matriculaRepository.findDetalladaById(93L)).thenReturn(Optional.of(matriculaConDetalle(93L, 7L, 1L)));
+
+        assertThatThrownBy(() -> service.obtener(93L, 1033L))
+                .isInstanceOf(AccesoDenegadoException.class)
+                .hasMessageContaining("otro estudiante");
+        assertThat(service.obtener(93L, ESTUDIANTE).id()).isEqualTo(93L);
+        assertThat(service.obtener(93L, null).id()).isEqualTo(93L);
     }
 
     @Test

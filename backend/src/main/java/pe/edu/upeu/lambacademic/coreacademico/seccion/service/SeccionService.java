@@ -20,6 +20,7 @@ import pe.edu.upeu.lambacademic.coreacademico.seccion.entity.HorarioAula;
 import pe.edu.upeu.lambacademic.coreacademico.seccion.entity.Seccion;
 import pe.edu.upeu.lambacademic.coreacademico.seccion.mapper.SeccionMapper;
 import pe.edu.upeu.lambacademic.coreacademico.seccion.port.PeriodoAcademicoPort;
+import pe.edu.upeu.lambacademic.coreacademico.seccion.port.SeccionEnUsoPort;
 import pe.edu.upeu.lambacademic.coreacademico.seccion.repository.SeccionRepository;
 import pe.edu.upeu.lambacademic.exception.ReglaNegocioException;
 import pe.edu.upeu.lambacademic.exception.ResourceNotFoundException;
@@ -53,6 +54,7 @@ public class SeccionService {
     private final SeccionMapper mapper;
     private final PersonaService personaService;
     private final PeriodoAcademicoPort periodoAcademicoPort;
+    private final SeccionEnUsoPort seccionEnUsoPort;
 
     @Transactional
     public SeccionResponse programar(SeccionRequest request) {
@@ -127,6 +129,23 @@ public class SeccionService {
         log.info("Seccion id={} cambia de estado {} -> {}", id, seccion.getEstado(), nuevo);
         seccion.setEstado(nuevo);
         return toResponse(seccionRepository.save(seccion));
+    }
+
+    /**
+     * [U2, S8] Elimina una seccion que nunca se uso: sin cupos ocupados, sin detalles de matricula
+     * (ni siquiera anulados, que conservan su historia) y en un periodo no cerrado. Si ya se uso,
+     * la operacion correcta es cancelarla (PATCH /estado), no borrarla.
+     */
+    @Transactional
+    public void eliminar(Long id) {
+        Seccion seccion = buscarOFallar(id);
+        if (seccion.getCuposOcupados() > 0 || seccionEnUsoPort.tieneMatriculas(id)) {
+            throw new ReglaNegocioException("No se puede eliminar la seccion " + id
+                    + ": ya tiene matriculas registradas. Cancelala en su lugar");
+        }
+        validarPeriodo(seccion.getPeriodoId());
+        seccionRepository.delete(seccion);
+        log.info("Seccion eliminada id={} curso={} grupo={}", id, seccion.getCurso().getCodigo(), seccion.getGrupo());
     }
 
     @Transactional(readOnly = true)

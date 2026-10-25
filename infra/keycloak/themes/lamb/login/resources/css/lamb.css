@@ -1,0 +1,45 @@
+/* Identidad LAMB Academic sobre el tema keycloak.v2 (PatternFly 5). */
+:root {
+  --lamb-marino: #0f2a4a;
+  --lamb-marino-2: #173a63;
+  --lamb-turquesa: #1c9c97;
+  --lamb-gris: #f3f5f8;
+  --pf-v5-global--primary-color--100: var(--lamb-marino-2);
+  --pf-v5-global--primary-color--200: var(--lamb-marino);
+  --pf-v5-global--link--Color: var(--lamb-marino-2);
+  --pf-v5-global--link--Color--hover: var(--lamb-turquesa);
+}
+
+.pf-v5-c-login,
+body {
+  background: var(--lamb-gris) !important;
+}
+
+.pf-v5-c-login__container {
+  border-top: 4px solid var(--lamb-marino);
+}
+
+.pf-v5-c-login__main {
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(15, 42, 74, 0.12);
+}
+
+#kc-header-wrapper,
+.pf-v5-c-login__header {
+  color: var(--lamb-marino);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+.lamb-marca strong {
+  color: var(--lamb-turquesa);
+  font-weight: 600;
+}
+
+.pf-v5-c-button.pf-m-primary {
+  background-color: var(--lamb-marino-2);
+}
+
+.pf-v5-c-button.pf-m-primary:hover {
+  background-color: var(--lamb-marino);
+}

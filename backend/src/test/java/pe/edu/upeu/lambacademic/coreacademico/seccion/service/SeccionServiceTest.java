@@ -21,6 +21,7 @@ import pe.edu.upeu.lambacademic.coreacademico.seccion.entity.HorarioAula;
 import pe.edu.upeu.lambacademic.coreacademico.seccion.entity.Seccion;
 import pe.edu.upeu.lambacademic.coreacademico.seccion.mapper.SeccionMapper;
 import pe.edu.upeu.lambacademic.coreacademico.seccion.port.PeriodoAcademicoPort;
+import pe.edu.upeu.lambacademic.coreacademico.seccion.port.SeccionEnUsoPort;
 import pe.edu.upeu.lambacademic.coreacademico.seccion.repository.SeccionRepository;
 import pe.edu.upeu.lambacademic.exception.ReglaNegocioException;
 import pe.edu.upeu.lambacademic.exception.ResourceNotFoundException;
@@ -46,6 +47,7 @@ class SeccionServiceTest {
     @Mock private SeccionMapper mapper;
     @Mock private PersonaService personaService;
     @Mock private PeriodoAcademicoPort periodoPort;
+    @Mock private SeccionEnUsoPort seccionEnUsoPort;
 
     @InjectMocks private SeccionService service;
 
@@ -167,6 +169,60 @@ class SeccionServiceTest {
 
     private static SeccionRequest request(HorarioAulaRequest... horarios) {
         return new SeccionRequest(1L, 4L, "A", null, 30, List.of(horarios));
+    }
+
+    @Test
+    @DisplayName("[U2, S8] Seccion sin matriculas en periodo activo: se elimina")
+    void eliminarSeccionSinUso() {
+        Seccion seccion = seccionGuardada(0);
+        when(seccionRepository.findDetalladaById(9L)).thenReturn(Optional.of(seccion));
+        when(seccionEnUsoPort.tieneMatriculas(9L)).thenReturn(false);
+
+        service.eliminar(9L);
+
+        verify(seccionRepository).delete(seccion);
+    }
+
+    @Test
+    @DisplayName("[U2, S8] Seccion que aparece en una matricula (aunque anulada y sin cupos): 409, se cancela")
+    void eliminarSeccionUsadaEnMatricula() {
+        when(seccionRepository.findDetalladaById(9L)).thenReturn(Optional.of(seccionGuardada(0)));
+        when(seccionEnUsoPort.tieneMatriculas(9L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.eliminar(9L))
+                .isInstanceOf(ReglaNegocioException.class).hasMessageContaining("Cancelala");
+        verify(seccionRepository, never()).delete(any(Seccion.class));
+    }
+
+    @Test
+    @DisplayName("[U2, S8] Seccion con cupos ocupados: 409 sin consultar Matricula")
+    void eliminarSeccionConCupos() {
+        when(seccionRepository.findDetalladaById(9L)).thenReturn(Optional.of(seccionGuardada(2)));
+
+        assertThatThrownBy(() -> service.eliminar(9L)).isInstanceOf(ReglaNegocioException.class);
+        verify(seccionRepository, never()).delete(any(Seccion.class));
+    }
+
+    @Test
+    @DisplayName("[U2, S8] Seccion de un periodo cerrado: 409 (conserva la historia)")
+    void eliminarSeccionDePeriodoCerrado() {
+        when(periodoPort.buscarPeriodo(4L))
+                .thenReturn(Optional.of(new PeriodoAcademicoPort.PeriodoInfo(4L, "2026-I", "2026-I", "CERRADO")));
+        when(seccionRepository.findDetalladaById(9L)).thenReturn(Optional.of(seccionGuardada(0)));
+
+        assertThatThrownBy(() -> service.eliminar(9L))
+                .isInstanceOf(ReglaNegocioException.class).hasMessageContaining("cerrado");
+        verify(seccionRepository, never()).delete(any(Seccion.class));
+    }
+
+    private static Seccion seccionGuardada(int cuposOcupados) {
+        Seccion seccion = new Seccion();
+        seccion.setId(9L);
+        seccion.setCurso(Curso.builder().id(1L).codigo("IS101").nombre("LP II").creditos(4).activo(true).build());
+        seccion.setPeriodoId(4L);
+        seccion.setGrupo("Z");
+        seccion.setCuposOcupados(cuposOcupados);
+        return seccion;
     }
 
     private static HorarioAulaRequest horario(DiaSemana dia, int desde, int hasta, String aula) {

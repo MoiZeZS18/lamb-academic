@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -68,6 +69,13 @@ public class SeccionController {
     @PatchMapping("/{id}/estado")
     public SeccionResponse cambiarEstado(@PathVariable Long id, @Valid @RequestBody CambioEstadoSeccionRequest request) {
         return service.cambiarEstado(id, request.estado());
+    }
+
+    @Operation(summary = "Elimina una seccion sin matriculas de un periodo no cerrado (si ya se uso, se cancela)")
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void eliminar(@PathVariable Long id) {
+        service.eliminar(id);
     }
 
     @Operation(summary = "Reporte agregado: ocupacion de vacantes por curso en un periodo")
