@@ -5,49 +5,150 @@
       <h1>Horario académico</h1>
       @if (matricula(); as m) {
         <p class="descripcion">
-          {{ periodos().get(m.periodoId)?.nombre ?? 'Periodo ' + m.periodoId }} · matrícula {{ m.id }} ·
-          {{ seccionesMatricula().length }} curso(s)
+          {{ alumnoDeMatricula() }} · {{ periodoDeMatricula()?.nombre ?? codigoPeriodo(m.periodoId) }}
         </p>
+      } @else if (!esCoordinacion()) {
+        <p class="descripcion">Tu horario semanal según tu matrícula vigente.</p>
+      } @else {
+        <p class="descripcion">Busca el horario de un alumno por periodo.</p>
       }
     </div>
     @if (bloques().length) {
-      <button type="button" class="boton no-imprimir" (click)="imprimir()">
-        <svg lucidePrinter aria-hidden="true"></svg>
-        Imprimir
-      </button>
+      <div class="acciones no-imprimir">
+        @if (matricula(); as m) {
+          <a class="boton" [routerLink]="['/matricula/consulta', m.id]">
+            <svg lucideEye aria-hidden="true"></svg>
+            Detalle de matrícula
+          </a>
+        }
+        <button type="button" class="boton" (click)="imprimir()">
+          <svg lucidePrinter aria-hidden="true"></svg>
+          Imprimir
+        </button>
+      </div>
     }
   </header>
 
-  <div class="tarjeta no-imprimir">
-    <div class="cuerpo barra-filtros">
-      @if (esCoordinacion()) {
+  <!-- ============ Seleccion / busqueda ============ -->
+  @if (esCoordinacion()) {
+    <form class="tarjeta no-imprimir" (ngSubmit)="buscar()" aria-label="Buscar horario de un alumno">
+      <div class="cuerpo barra-filtros">
         <div class="campo">
-          <label for="numero">N.º de matrícula</label>
-          <input id="numero" type="number" min="1" [(ngModel)]="numeroBuscado" (keyup.enter)="seleccionar(numeroBuscado)" />
-        </div>
-        <button type="button" class="boton" (click)="seleccionar(numeroBuscado)" [disabled]="!numeroBuscado">Consultar</button>
-      } @else if (matriculas().length > 1) {
-        <div class="campo campo-ancho">
-          <label for="matricula">Matrícula / periodo</label>
-          <select id="matricula" [ngModel]="matricula()?.id" (ngModelChange)="seleccionar($event)">
-            @for (m of matriculas(); track m.id) {
-              <option [ngValue]="m.id">{{ etiquetaMatricula(m) }}</option>
+          <label for="h-periodo">Periodo</label>
+          <select id="h-periodo" name="periodo" [ngModel]="periodoBuscado()" (ngModelChange)="periodoBuscado.set($event)">
+            @for (p of periodos(); track p.id) {
+              <option [ngValue]="p.id">{{ p.codigo }} · {{ p.estado }}</option>
             }
           </select>
         </div>
-      }
-      @if (seccionesMatricula().length > 1) {
         <div class="campo">
-          <label for="curso">Curso</label>
-          <select id="curso" [ngModel]="cursoFiltro()" (ngModelChange)="cursoFiltro.set($event)">
-            <option [ngValue]="null">Todos</option>
+          <label for="h-texto">Buscar alumno</label>
+          <input
+            id="h-texto"
+            name="texto"
+            type="search"
+            placeholder="Código, nombre o documento"
+            [ngModel]="textoAlumno()"
+            (ngModelChange)="textoAlumno.set($event)"
+          />
+        </div>
+        <div class="campo campo-ancho">
+          <label for="h-alumno">Alumno</label>
+          <select id="h-alumno" name="alumno" [ngModel]="alumnoBuscado()" (ngModelChange)="alumnoBuscado.set($event)">
+            <option [ngValue]="null" disabled>
+              {{ alumnosFiltrados().length ? 'Selecciona un alumno (' + alumnosFiltrados().length + ')' : 'Ningún alumno coincide' }}
+            </option>
+            @for (a of alumnosFiltrados(); track a.id) {
+              <option [ngValue]="a.id">{{ a.codigoEstudiante }} · {{ a.persona.nombreCompleto }}</option>
+            }
+          </select>
+        </div>
+        <button type="submit" class="boton boton-primario" [disabled]="!periodoBuscado() || !alumnoBuscado() || buscando()">
+          {{ buscando() ? 'Buscando…' : 'Ver horario' }}
+        </button>
+      </div>
+    </form>
+  } @else if (misMatriculas().length > 1) {
+    <div class="tarjeta no-imprimir">
+      <div class="cuerpo barra-filtros">
+        <div class="campo campo-ancho">
+          <label for="h-matricula">Periodo</label>
+          <select id="h-matricula" [ngModel]="matricula()?.id" (ngModelChange)="mostrar($event)">
+            @for (m of misMatriculas(); track m.id) {
+              <option [ngValue]="m.id">{{ codigoPeriodo(m.periodoId) }} · matrícula {{ m.id }} ({{ m.estado }})</option>
+            }
+          </select>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (error()) {
+    <p class="mensaje mensaje-error" role="alert">{{ error() }}</p>
+  }
+  @if (sinResultado()) {
+    <p class="mensaje mensaje-info" role="status">{{ sinResultado() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="estado-carga" aria-busy="true">Cargando horario…</p>
+  } @else if (!matricula()) {
+    @if (!error() && !sinResultado()) {
+      <div class="tarjeta">
+        @if (esCoordinacion()) {
+          <app-estado-vacio
+            titulo="Elige el periodo y el alumno"
+            descripcion="Se mostrará el horario de su matrícula vigente en ese periodo. También puedes abrirlo desde la consulta de matrículas."
+          >
+            <a class="boton" routerLink="/matricula/consulta">Consultar matrículas</a>
+          </app-estado-vacio>
+        } @else {
+          <app-estado-vacio
+            titulo="No tienes una matrícula vigente"
+            descripcion="Tu horario aparecerá cuando registres tu matrícula."
+          >
+            <a class="boton boton-primario" routerLink="/matricula/inscripcion">Ir a inscripción</a>
+          </app-estado-vacio>
+        }
+      </div>
+    }
+  } @else {
+    @let m = matricula()!;
+    <div class="tarjeta resumen-horario">
+      <div class="dato">
+        <span class="dato-etiqueta">Matrícula</span>
+        <span class="num">{{ m.id }}</span>
+      </div>
+      <div class="dato">
+        <span class="dato-etiqueta">Periodo</span>
+        <span>{{ codigoPeriodo(m.periodoId) }}</span>
+      </div>
+      <div class="dato">
+        <span class="dato-etiqueta">Estado</span>
+        <app-etiqueta-estado [estado]="m.estado" />
+      </div>
+      <div class="dato">
+        <span class="dato-etiqueta">Cursos</span>
+        <span class="num">{{ seccionesMatricula().length }}</span>
+      </div>
+      <div class="dato">
+        <span class="dato-etiqueta">Créditos</span>
+        <span class="num">{{ m.totalCreditos ?? '—' }}</span>
+      </div>
+      <div class="dato">
+        <span class="dato-etiqueta">Horas semanales</span>
+        <span class="num">{{ horasSemanales() }}</span>
+      </div>
+      <div class="opciones no-imprimir">
+        @if (seccionesMatricula().length > 1) {
+          <label class="visualmente-oculto" for="h-curso">Mostrar curso</label>
+          <select id="h-curso" [ngModel]="cursoFiltro()" (ngModelChange)="cursoFiltro.set($event)">
+            <option [ngValue]="null">Todos los cursos</option>
             @for (s of seccionesMatricula(); track s.id) {
               <option [ngValue]="s.curso.id">{{ s.curso.codigo }} · {{ s.curso.nombre }}</option>
             }
           </select>
-        </div>
-      }
-      @if (matricula()) {
+        }
         <label class="casilla">
           <input type="checkbox" [ngModel]="mostrarAula()" (ngModelChange)="mostrarAula.set($event)" />
           Aula
@@ -56,55 +157,35 @@
           <input type="checkbox" [ngModel]="mostrarDocente()" (ngModelChange)="mostrarDocente.set($event)" />
           Docente
         </label>
-      }
-    </div>
-  </div>
-
-  @if (error()) {
-    <p class="mensaje mensaje-error" role="alert">{{ error() }}</p>
-  }
-
-  @if (loading()) {
-    <p class="estado-carga">Cargando horario…</p>
-  } @else if (!matricula()) {
-    @if (!error()) {
-      <div class="tarjeta">
-        <div class="estado-vacio">
-          @if (esCoordinacion()) {
-            <strong>Indica el número de matrícula</strong>
-            También puedes abrir el horario desde la <a routerLink="/matricula/consulta">consulta de matrículas</a>.
-          } @else {
-            <strong>No tienes una matrícula vigente</strong>
-            Tu horario aparecerá cuando registres tu matrícula. <a routerLink="/matricula/inscripcion">Ir a inscripción</a>
-          }
-        </div>
       </div>
-    }
-  } @else {
+    </div>
+
     @if (sinHorario()) {
       <p class="mensaje mensaje-info">
         {{ sinHorario() }} curso(s) de esta matrícula no tienen una sección vigente en la oferta del periodo (registros
         anteriores a la integración) y no se muestran en el horario.
       </p>
     }
+
     @if (bloques().length) {
       <div class="tarjeta">
         <div class="cuerpo tabla-contenedor">
-          <app-horario-semanal [bloques]="bloques()" [titulo]="'Horario de la matrícula ' + matricula()?.id" />
+          <app-horario-semanal [bloques]="bloques()" [mostrarLeyenda]="true" [titulo]="'Horario de la matrícula ' + m.id" />
         </div>
       </div>
       <div class="tarjeta">
         <header><h2>Detalle de clases</h2></header>
         <div class="tabla-contenedor">
           <table class="tabla">
+            <caption class="visualmente-oculto">Clases de la semana</caption>
             <thead>
               <tr>
-                <th>Día</th>
-                <th>Horario</th>
-                <th>Curso</th>
-                <th>Sección</th>
-                <th>Aula</th>
-                <th>Docente</th>
+                <th scope="col">Día</th>
+                <th scope="col">Horario</th>
+                <th scope="col">Curso</th>
+                <th scope="col">Sección</th>
+                <th scope="col">Aula</th>
+                <th scope="col" class="col-secundaria">Docente</th>
               </tr>
             </thead>
             <tbody>
@@ -112,10 +193,13 @@
                 <tr>
                   <td>{{ c.dia }}</td>
                   <td class="num">{{ c.inicio }}–{{ c.fin }}</td>
-                  <td class="celda-principal">{{ c.seccion.curso.codigo }} · {{ c.seccion.curso.nombre }}</td>
+                  <td>
+                    <span class="celda-principal">{{ c.seccion.curso.codigo }}</span>
+                    <span class="texto-secundario"> · {{ c.seccion.curso.nombre }}</span>
+                  </td>
                   <td>{{ c.seccion.grupo }}</td>
                   <td>{{ c.aula }}</td>
-                  <td>{{ c.seccion.docenteNombre ?? 'Por asignar' }}</td>
+                  <td class="col-secundaria">{{ c.seccion.docenteNombre ?? 'Por asignar' }}</td>
                 </tr>
               }
             </tbody>
@@ -124,10 +208,10 @@
       </div>
     } @else if (!sinHorario()) {
       <div class="tarjeta">
-        <div class="estado-vacio">
-          <strong>Sin clases programadas</strong>
-          Las secciones de esta matrícula todavía no tienen horario registrado.
-        </div>
+        <app-estado-vacio
+          titulo="Sin clases programadas"
+          descripcion="Las secciones de esta matrícula todavía no tienen horario registrado."
+        />
       </div>
     }
   }

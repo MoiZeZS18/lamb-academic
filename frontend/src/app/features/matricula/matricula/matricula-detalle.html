@@ -29,9 +29,110 @@
   }
 
   @if (loading()) {
-    <p class="estado-carga">Consultando la matrícula…</p>
+    <p class="estado-carga" aria-busy="true">Consultando la matrícula…</p>
   } @else if (matricula(); as m) {
-    <div class="rejilla rejilla-2">
+    <div class="distribucion-con-panel">
+      <div class="columna-principal">
+      <article class="tarjeta">
+        <header><h2>Cursos matriculados</h2></header>
+        <div class="tabla-contenedor">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th scope="col">Curso</th>
+                <th scope="col">Sección</th>
+                <th scope="col" class="col-secundaria">Docente</th>
+                <th scope="col">Horario</th>
+                <th scope="col" class="col-num">Créditos</th>
+                <th scope="col">Resultado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (d of m.detalles; track d.id) {
+                <tr>
+                  <td class="celda-principal">{{ curso(d.cursoId) }}</td>
+                  @if (seccion(d.seccionId); as s) {
+                    <td>{{ s.grupo }}</td>
+                    <td class="col-secundaria">{{ s.docenteNombre ?? 'Por asignar' }}</td>
+                    <td class="texto-pequeno">{{ resumenHorario(s.horarios) || 'Sin horario' }}</td>
+                  } @else {
+                    <td colspan="3" class="texto-secundario">Sección {{ d.seccionId }} no disponible en la oferta del periodo</td>
+                  }
+                  <td class="col-num">{{ d.creditos ?? '—' }}</td>
+                  <td>
+                    @if (puedeRegistrarResultado() && d.cursoId) {
+                      <select
+                        [ngModel]="d.resultado"
+                        (ngModelChange)="registrarResultado(d.id, $event)"
+                        [disabled]="procesando()"
+                        [attr.aria-label]="'Resultado de ' + curso(d.cursoId)"
+                      >
+                        <option [ngValue]="null" disabled>Registrar…</option>
+                        @for (r of resultados; track r) {
+                          <option [ngValue]="r">{{ r }}</option>
+                        }
+                      </select>
+                    } @else if (d.resultado) {
+                      <app-etiqueta-estado [estado]="d.resultado" />
+                    } @else {
+                      <span class="texto-secundario">Pendiente</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4">Total</td>
+                <td class="col-num num">{{ m.totalCreditos ?? '—' }}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </article>
+
+      @if (cargo(); as detalle) {
+        <article class="tarjeta">
+          <header><h2>Cuotas del cargo {{ detalle.numeroCargo }}</h2></header>
+          <div class="tabla-contenedor">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th class="col-num">N.º</th>
+                  <th>Concepto</th>
+                  <th>Vencimiento</th>
+                  <th class="col-num">Monto</th>
+                  <th class="col-num">Pagado</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (q of detalle.cuotas; track q.id) {
+                  <tr>
+                    <td class="col-num">{{ q.numeroCuota }}</td>
+                    <td>{{ q.conceptoNombre ?? 'Matrícula' }}</td>
+                    <td class="num">{{ q.fechaVencimiento | date: 'dd/MM/yyyy' }}</td>
+                    <td class="col-num num">{{ q.montoCuota | currency: 'PEN' : 'S/' }}</td>
+                    <td class="col-num num">{{ q.montoPagado | currency: 'PEN' : 'S/' }}</td>
+                    <td><app-etiqueta-estado [estado]="q.estado" /></td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3">Total</td>
+                  <td class="col-num num">{{ detalle.montoTotal | currency: 'PEN' : 'S/' }}</td>
+                  <td class="col-num num">{{ totalPagado() | currency: 'PEN' : 'S/' }}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </article>
+      }
+      </div>
+      <aside class="panel-lateral" aria-label="Cabecera y cargo de la matrícula">
       <article class="tarjeta">
         <header>
           <h2>Cabecera</h2>
@@ -99,105 +200,7 @@
           </footer>
         }
       </article>
+      </aside>
     </div>
-
-    <article class="tarjeta">
-      <header><h2>Cursos matriculados</h2></header>
-      <div class="tabla-contenedor">
-        <table class="tabla">
-          <thead>
-            <tr>
-              <th>Curso</th>
-              <th>Sección</th>
-              <th>Docente</th>
-              <th>Horario</th>
-              <th class="col-num">Créditos</th>
-              <th>Resultado</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (d of m.detalles; track d.id) {
-              <tr>
-                <td class="celda-principal">{{ curso(d.cursoId) }}</td>
-                @if (seccion(d.seccionId); as s) {
-                  <td>{{ s.grupo }}</td>
-                  <td>{{ s.docenteNombre ?? 'Por asignar' }}</td>
-                  <td class="texto-pequeno">{{ resumenHorario(s.horarios) || 'Sin horario' }}</td>
-                } @else {
-                  <td colspan="3" class="texto-secundario">Sección {{ d.seccionId }} no disponible en la oferta del periodo</td>
-                }
-                <td class="col-num">{{ d.creditos ?? '—' }}</td>
-                <td>
-                  @if (puedeRegistrarResultado() && d.cursoId) {
-                    <select
-                      [ngModel]="d.resultado"
-                      (ngModelChange)="registrarResultado(d.id, $event)"
-                      [disabled]="procesando()"
-                      [attr.aria-label]="'Resultado de ' + curso(d.cursoId)"
-                    >
-                      <option [ngValue]="null" disabled>Registrar…</option>
-                      @for (r of resultados; track r) {
-                        <option [ngValue]="r">{{ r }}</option>
-                      }
-                    </select>
-                  } @else if (d.resultado) {
-                    <app-etiqueta-estado [estado]="d.resultado" />
-                  } @else {
-                    <span class="texto-secundario">Pendiente</span>
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colspan="4">Total</td>
-              <td class="col-num num">{{ m.totalCreditos ?? '—' }}</td>
-              <td></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </article>
-
-    @if (cargo(); as detalle) {
-      <article class="tarjeta">
-        <header><h2>Cuotas del cargo {{ detalle.numeroCargo }}</h2></header>
-        <div class="tabla-contenedor">
-          <table class="tabla">
-            <thead>
-              <tr>
-                <th class="col-num">N.º</th>
-                <th>Concepto</th>
-                <th>Vencimiento</th>
-                <th class="col-num">Monto</th>
-                <th class="col-num">Pagado</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (q of detalle.cuotas; track q.id) {
-                <tr>
-                  <td class="col-num">{{ q.numeroCuota }}</td>
-                  <td>{{ q.conceptoNombre ?? 'Matrícula' }}</td>
-                  <td class="num">{{ q.fechaVencimiento | date: 'dd/MM/yyyy' }}</td>
-                  <td class="col-num num">{{ q.montoCuota | currency: 'PEN' : 'S/' }}</td>
-                  <td class="col-num num">{{ q.montoPagado | currency: 'PEN' : 'S/' }}</td>
-                  <td><app-etiqueta-estado [estado]="q.estado" /></td>
-                </tr>
-              }
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="3">Total</td>
-                <td class="col-num num">{{ detalle.montoTotal | currency: 'PEN' : 'S/' }}</td>
-                <td class="col-num num">{{ totalPagado() | currency: 'PEN' : 'S/' }}</td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </article>
-    }
   }
 </section>

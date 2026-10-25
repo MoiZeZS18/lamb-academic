@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { LucideDynamicIcon, LucideGraduationCap, LucideLogIn, LucideLogOut, LucideMenu, LucideX } from '@lucide/angular';
 import { filter } from 'rxjs';
@@ -57,5 +57,17 @@ export class Layout {
     inject(Router)
       .events.pipe(filter((e) => e instanceof NavigationEnd))
       .subscribe(() => this.menuAbierto.set(false));
+  }
+
+  /** En pantallas pequenas, Escape cierra el menu lateral desplegado. */
+  @HostListener('document:keydown.escape')
+  protected cerrarMenu(): void {
+    this.menuAbierto.set(false);
+  }
+
+  /** "Saltar al contenido": lleva el foco al area principal sin recargar la ruta. */
+  protected irAlContenido(evento: Event): void {
+    evento.preventDefault();
+    document.getElementById('contenido')?.focus();
   }
 }

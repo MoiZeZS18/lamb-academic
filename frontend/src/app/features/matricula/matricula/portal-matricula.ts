@@ -2,24 +2,48 @@ import { CurrencyPipe, DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LucideCalendarDays, LucideCircleAlert, LucideClipboardPen, LucideEye } from '@lucide/angular';
+import {
+  LucideCalendarDays,
+  LucideCalendarRange,
+  LucideChartColumn,
+  LucideCircleAlert,
+  LucideClipboardPen,
+  LucideEye,
+  LucideLayers,
+  LucideListChecks,
+} from '@lucide/angular';
 import { forkJoin, of } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth-service';
 import { ROLES_COORDINACION, Rol } from '../../../core/auth/roles';
 import { mensajeHttp } from '../../../core/services/error-http';
+import { EstadoVacio } from '../../../shared/componentes/estado-vacio';
 import { EtiquetaEstado } from '../../../shared/componentes/etiqueta-estado';
+import { BloqueSemanal, HorarioSemanal } from '../../../shared/horario/horario-semanal';
+import { resumenHorario } from '../../../shared/horario/horario-util';
 import { Curso } from '../../core-academico/curso/curso.model';
 import { CursoService } from '../../core-academico/curso/curso-service';
+import { Cargo, CargoService } from '../../finanzas/cargo/cargo-service';
 import { Periodo } from '../periodo/periodo.model';
 import { PeriodoService } from '../periodo/periodo-service';
+import { Seccion } from '../seccion/seccion.model';
 import { SeccionService } from '../seccion/seccion-service';
 import { matriculaVigente, motivoBloqueo, periodoActivo } from './contexto-matricula';
-import { Matricula, MatriculaReporte } from './matricula.model';
+import { ESTADO_ANULADA, Matricula, MatriculaReporte } from './matricula.model';
 import { MatriculaService } from './matricula-service';
 
+/** Matriculas del periodo por estado (los estados registrados en Oracle, PENDIENTES C6). */
+interface ResumenPeriodo {
+  activas: number;
+  anuladas: number;
+  /** Inscripciones a cursos (detalles) de las matriculas activas: INICIADA + CONFIRMADA. */
+  cursosActivos: number;
+}
+
 /**
- * Portal de matricula (pantalla A): periodo vigente, disponibilidad de inscripcion y, para el
- * estudiante, su matricula actual con creditos y cargo. Todo sale del backend: no hay fechas fijas.
+ * Portal de matricula (pantalla A). Todo sale del backend: periodo vigente y su disponibilidad,
+ * y segun el rol, la matricula propia con sus cursos, cargo y horario (ESTUDIANTE) o los
+ * indicadores del periodo con accesos a la gestion (COORDINADOR / ADMIN). Sin fechas fijas ni
+ * estadisticas inventadas: si un dato no existe, se dice.
  */
 @Component({
   selector: 'app-portal-matricula',
@@ -28,48 +52,106 @@ import { MatriculaService } from './matricula-service';
     DatePipe,
     CurrencyPipe,
     EtiquetaEstado,
+    EstadoVacio,
+    HorarioSemanal,
     LucideCalendarDays,
+    LucideCalendarRange,
+    LucideChartColumn,
     LucideCircleAlert,
     LucideClipboardPen,
     LucideEye,
+    LucideLayers,
+    LucideListChecks,
   ],
   templateUrl: './portal-matricula.html',
+  styleUrl: './portal-matricula.css',
 })
 export class PortalMatricula implements OnInit {
   private readonly periodoService = inject(PeriodoService);
   private readonly matriculaService = inject(MatriculaService);
   private readonly seccionService = inject(SeccionService);
   private readonly cursoService = inject(CursoService);
+  private readonly cargoService = inject(CargoService);
   protected readonly auth = inject(AuthService);
 
+  protected readonly resumenHorario = resumenHorario;
+  protected readonly rolAdmin = Rol.ADMIN;
+
+  protected readonly periodos = signal<Periodo[]>([]);
   protected readonly periodo = signal<Periodo | null>(null);
-  protected readonly matricula = signal<Matricula | null>(null);
+  protected readonly misMatriculas = signal<Matricula[]>([]);
+  protected readonly cargo = signal<Cargo | null>(null);
+  protected readonly secciones = signal<Seccion[]>([]);
   protected readonly cursos = signal<Map<number, Curso>>(new Map());
-  protected readonly reporte = signal<MatriculaReporte | null>(null);
-  protected readonly seccionesAbiertas = signal<number | null>(null);
+  protected readonly resumen = signal<ResumenPeriodo | null>(null);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
 
-  protected readonly esEstudiante = computed(() => this.auth.tieneRol(Rol.ESTUDIANTE) && this.auth.alumnoId() !== null);
+  protected readonly esEstudiante = computed(
+    () => this.auth.tieneRol(Rol.ESTUDIANTE) && !this.auth.tieneRol(...ROLES_COORDINACION),
+  );
   protected readonly esCoordinacion = computed(() => this.auth.tieneRol(...ROLES_COORDINACION));
-  protected readonly puedeInscribir = computed(() => this.esEstudiante() || this.esCoordinacion());
   protected readonly bloqueo = computed(() => motivoBloqueo(this.periodo()));
 
+  /** Matricula vigente (no anulada) del estudiante en el periodo activo. */
+  protected readonly matricula = computed(() => {
+    const periodo = this.periodo();
+    return periodo ? matriculaVigente(this.misMatriculas().filter((m) => m.periodoId === periodo.id)) : null;
+  });
+
+  /** Otras matriculas del estudiante (periodos anteriores o anuladas), para su historial. */
+  protected readonly historial = computed(() => {
+    const actual = this.matricula();
+    return this.misMatriculas().filter((m) => m.id !== actual?.id);
+  });
+
+  private readonly seccionPorId = computed(() => new Map(this.secciones().map((s) => [s.id, s])));
+
+  /** Cursos de la matricula vigente con su seccion (si existe en la oferta del periodo). */
+  protected readonly cursosMatriculados = computed(() =>
+    (this.matricula()?.detalles ?? []).map((d) => ({ detalle: d, seccion: this.seccionPorId().get(d.seccionId) })),
+  );
+
+  protected readonly bloquesHorario = computed<BloqueSemanal[]>(() =>
+    this.cursosMatriculados().flatMap(({ seccion }) =>
+      (seccion?.horarios ?? []).map((h) => ({
+        clave: String(seccion!.id),
+        dia: h.diaSemana,
+        inicio: h.horaInicio,
+        fin: h.horaFin,
+        titulo: `${seccion!.curso.codigo} · ${seccion!.grupo}`,
+        subtitulo: `Aula ${h.aula}`,
+      })),
+    ),
+  );
+
+  /** Oferta del periodo calculada sobre las secciones reales devueltas por la API. */
+  protected readonly oferta = computed(() => {
+    const vigentes = this.secciones().filter((s) => s.estado !== 'CANCELADA');
+    return {
+      abiertas: vigentes.filter((s) => s.estado === 'ABIERTA').length,
+      total: vigentes.length,
+      vacantesDisponibles: vigentes
+        .filter((s) => s.estado === 'ABIERTA')
+        .reduce((t, s) => t + s.vacantesDisponibles, 0),
+      sinVacantes: vigentes
+        .filter((s) => s.estado === 'ABIERTA' && s.vacantesDisponibles <= 0)
+        .sort((a, b) => a.curso.codigo.localeCompare(b.curso.codigo)),
+    };
+  });
+
   ngOnInit(): void {
-    if (this.auth.tieneRol(Rol.ESTUDIANTE) && this.auth.alumnoId() === null) {
+    if (this.auth.tieneRol(Rol.ESTUDIANTE) && !this.esCoordinacion() && this.auth.alumnoId() === null) {
       this.error.set(
         'Tu cuenta no está vinculada a ningún alumno. Solicita a la administración que registre tu código de alumno.',
       );
     }
     this.periodoService.listar().subscribe({
       next: (periodos) => {
+        this.periodos.set(periodos);
         const activo = periodoActivo(periodos);
         this.periodo.set(activo);
-        if (!activo) {
-          this.loading.set(false);
-          return;
-        }
-        this.cargarDelPeriodo(activo);
+        this.cargarDatos(activo);
       },
       error: (err: HttpErrorResponse) => {
         this.error.set(mensajeHttp(err, 'No se pudo consultar el periodo académico.'));
@@ -78,20 +160,33 @@ export class PortalMatricula implements OnInit {
     });
   }
 
-  private cargarDelPeriodo(periodo: Periodo): void {
+  private cargarDatos(periodo: Periodo | null): void {
+    const estudiante = this.esEstudiante() && this.auth.alumnoId() !== null;
+    const coordinacion = this.esCoordinacion() && periodo !== null;
     forkJoin({
-      // Para el estudiante el backend filtra por su alumno_id; aqui solo se acota el periodo.
-      propias: this.esEstudiante() ? this.matriculaService.buscar({ periodoId: periodo.id }, 0, 20) : of(null),
-      reporte: this.esCoordinacion() ? this.matriculaService.reporte({ periodoId: periodo.id }) : of(null),
-      secciones: this.seccionService.listar({ periodoId: periodo.id, estado: 'ABIERTA' }),
-      cursos: this.cursoService.listar(),
+      // Para el estudiante el backend devuelve solo sus matriculas (claim alumno_id).
+      propias: estudiante ? this.matriculaService.buscar({}, 0, 50) : of(null),
+      secciones: periodo ? this.seccionService.listar({ periodoId: periodo.id }) : of([] as Seccion[]),
+      cursos: estudiante ? this.cursoService.listar() : of([] as Curso[]),
+      iniciadas: coordinacion ? this.matriculaService.reporte({ periodoId: periodo!.id, estado: 'INICIADA' }) : of(null),
+      confirmadas: coordinacion
+        ? this.matriculaService.reporte({ periodoId: periodo!.id, estado: 'CONFIRMADA' })
+        : of(null),
+      anuladas: coordinacion ? this.matriculaService.reporte({ periodoId: periodo!.id, estado: ESTADO_ANULADA }) : of(null),
     }).subscribe({
-      next: ({ propias, reporte, secciones, cursos }) => {
-        this.matricula.set(propias ? matriculaVigente(propias.content) : null);
-        this.reporte.set(reporte);
-        this.seccionesAbiertas.set(secciones.length);
-        this.cursos.set(new Map(cursos.map((c) => [c.id, c])));
-        this.loading.set(false);
+      next: (datos) => {
+        this.misMatriculas.set(datos.propias?.content ?? []);
+        this.secciones.set(datos.secciones);
+        this.cursos.set(new Map(datos.cursos.map((c) => [c.id, c])));
+        if (datos.iniciadas) {
+          const activas = [datos.iniciadas, datos.confirmadas].filter((r): r is MatriculaReporte => r !== null);
+          this.resumen.set({
+            activas: activas.reduce((t, r) => t + r.totalMatriculas, 0),
+            anuladas: datos.anuladas?.totalMatriculas ?? 0,
+            cursosActivos: activas.reduce((t, r) => t + r.totalDetalles, 0),
+          });
+        }
+        this.cargarCargo();
       },
       error: (err: HttpErrorResponse) => {
         this.error.set(mensajeHttp(err, 'No se pudo consultar la información de matrícula.'));
@@ -100,9 +195,33 @@ export class PortalMatricula implements OnInit {
     });
   }
 
+  /** El cargo con su saldo real lo consulta Finanzas (el estudiante solo puede ver el suyo). */
+  private cargarCargo(): void {
+    const cargo = this.matricula()?.cargo;
+    if (!cargo) {
+      this.loading.set(false);
+      return;
+    }
+    this.cargoService.obtener(cargo.cargoId).subscribe({
+      next: (detalle) => {
+        this.cargo.set(detalle);
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false),
+    });
+  }
+
+  protected codigoPeriodo(id: number): string {
+    return this.periodos().find((p) => p.id === id)?.codigo ?? `Periodo ${id}`;
+  }
+
   protected nombreCurso(id: number | null): string {
     if (id === null) return 'Curso sin identificar (registro anterior a la integración)';
     const curso = this.cursos().get(id);
     return curso ? `${curso.codigo} · ${curso.nombre}` : `Curso ${id}`;
+  }
+
+  protected proximaCuota() {
+    return this.cargo()?.cuotas.find((c) => c.estado === 'PENDIENTE' || c.estado === 'PAGADA_PARCIAL') ?? null;
   }
 }

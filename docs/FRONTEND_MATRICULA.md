@@ -40,7 +40,7 @@ formulario de cada tabla son componentes separados (S12 Tabla 2, pregunta de S8)
 | Pantalla | Ruta | Guardas | Datos reales |
 |---|---|---|---|
 | Inicio público | `/` | — | — |
-| A. Portal de matrícula | `/matricula` | authGuard | periodos, matrícula propia, reporte del periodo, secciones abiertas |
+| A. Portal de matrícula | `/matricula` | authGuard | periodos, secciones del periodo; estudiante: matrícula propia, cursos y cargo (`/finanzas/cargos/{id}`); coordinación: `/matriculas/reporte` por estado |
 | B+C. Inscripción (oferta + cabecera-detalle) | `/matricula/inscripcion` | authGuard + rol ESTUDIANTE/COORDINADOR/ADMIN | periodos, secciones del periodo, alumnos (personal), prerrequisitos |
 | E. Consulta paginada | `/matricula/consulta` | idem | matrículas paginadas, periodos, cursos, secciones, alumnos |
 | Detalle con cargo y cuotas | `/matricula/consulta/:id` | idem | matrícula, periodo, secciones, cursos, cargo de Finanzas |
@@ -118,3 +118,27 @@ y se contrastó con lo implementado:
 | 3.11–3.15 | Lista y formulario separados, mensajes de carga/error/vacío, confirmación al eliminar, editar carga los datos actuales | `PeriodoList` / `PeriodoForm`; eliminar con diálogo; probado contra el backend real | Cumple |
 | 3.5 | Reusar `favicon.ico`, sin paquetes de íconos | Lucide + `favicon.svg` | Diferencia documentada (§4) |
 | 4.4 | Criterios mínimos (estructura, layout con dos rutas, servicio HTTP, interceptor, CRUD real) | Ver `docs/lp2-demo-matricula.md` §3 | Cumple |
+
+## 7. Mejora de la interfaz (rama `unidad2/mejora-frontend-matricula`)
+
+Mejora visual y de usabilidad sin cambiar endpoints, reglas de negocio, roles ni la arquitectura
+`core/shared/features`. Punto de recuperación: etiqueta local `respaldo/antes-mejora-frontend-matricula`.
+
+| Área | Cambio | Datos que usa |
+|---|---|---|
+| Distribución general | Contenido fluido hasta 1600 px; columna principal + panel lateral fijo (`.distribucion-con-panel`) que pasa a una columna bajo 1200 px; enlace “Saltar al contenido”; menú con `aria-current`, fondo y cierre con Escape en móvil; columnas secundarias ocultas en pantallas medianas | — |
+| Portal (estudiante) | Franja del periodo con disponibilidad real; matrícula vigente con cursos, sección, docente, horario y créditos; vista “Mi semana de clases”; panel con el cargo y su saldo real y la próxima cuota; “Iniciar inscripción” solo si no hay matrícula y el periodo lo permite; historial | `/periodos`, `/matriculas` (filtrado por el token), `/secciones`, `/cursos`, `/finanzas/cargos/{id}` |
+| Portal (coordinación) | Indicadores: matrículas activas (INICIADA + CONFIRMADA), anuladas, inscripciones a cursos de las activas, secciones abiertas, vacantes disponibles; accesos de gestión; secciones abiertas sin vacantes | `/matriculas/reporte?estado=`, `/secciones` |
+| Inscripción | Búsqueda de alumno por código, nombre o documento (solo personal); oferta en 5 columnas (vacantes “disponibles de capacidad” y ocupadas); panel con resumen, validaciones y lo que falta antes de registrar. Se conservan el `FormArray`, las validaciones, la confirmación y el envío único | sin cambios |
+| Horario | Calendario semanal con colores por curso, día actual, líneas de media hora, carriles para cruces, leyenda y vista de agenda en móvil; tabla de clases; impresión. Estudiante: su matrícula vigente sin buscar (nunca una anulada). Coordinación: búsqueda por periodo y alumno, con mensajes si no hay matrícula o solo hay anuladas | `/matriculas`, `/matriculas/{id}`, `/secciones`, `/alumnos` |
+| Consulta | Filtros con búsqueda de alumno, tamaño de página y “Limpiar filtros”; `aria-sort`; filas anuladas atenuadas y sin acción de horario; detalle expandido con docente y horario | sin cambios |
+| Secciones y periodos | “Ocupados / capacidad” y “Disponibles” en lugar de “Vacantes”; eliminar deshabilitado con el motivo (tiene matriculados o periodo cerrado); confirmaciones que explican la consecuencia; avisos al editar un periodo cerrado o activar uno cuando ya hay otro activo. El `DELETE` de secciones no cambió | sin cambios |
+| Reportes | Matrículas activas y anuladas por separado; cargos vigentes, pagos realizados, saldo pendiente, anulados (no cobrables) y total histórico; “No aplica” en lo pagado de un cargo anulado; ocupación con capacidad total, ocupados y disponibles | `/matriculas/reporte`, `/secciones/resumen`, `/finanzas/cargos/resumen` |
+
+Componente reutilizable nuevo: `shared/componentes/estado-vacio.ts` (`app-estado-vacio`).
+`HorarioSemanal` pasó a plantilla y estilos propios (`horario-semanal.html/.css`).
+
+Cálculo de los indicadores financieros (`indicadoresCargos` en `reporte-matricula.ts`): se apoya en
+las reglas de `CargoService` del backend (un cargo ANULADO queda con saldo 0 y no admite pagos). Lo
+pagado es `montoTotal − saldoPendiente` solo de los cargos no anulados; lo anulado nunca se suma a la
+deuda ni a los pagos. No se modificó ningún cálculo del backend.

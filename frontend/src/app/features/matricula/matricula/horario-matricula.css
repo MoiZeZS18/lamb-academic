@@ -1,0 +1,40 @@
+.resumen-horario {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 2rem;
+  padding: 0.875rem 1.25rem;
+}
+
+.dato {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.dato-etiqueta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lamb-gris-600);
+}
+
+.opciones {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.opciones select {
+  width: auto;
+  min-width: 220px;
+}
+
+@media (max-width: 720px) {
+  .opciones {
+    margin-left: 0;
+  }
+}

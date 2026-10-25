@@ -10,11 +10,11 @@
     </div>
   </header>
 
-  <div class="tarjeta">
+  <form class="tarjeta" aria-label="Filtros de la consulta" (submit)="$event.preventDefault()">
     <div class="cuerpo barra-filtros">
       <div class="campo">
         <label for="f-periodo">Periodo</label>
-        <select id="f-periodo" [(ngModel)]="periodoFiltro" (ngModelChange)="filtrar()">
+        <select id="f-periodo" name="periodo" [(ngModel)]="periodoFiltro" (ngModelChange)="filtrar()">
           <option [ngValue]="null">Todos</option>
           @for (p of periodos(); track p.id) {
             <option [ngValue]="p.id">{{ p.codigo }}</option>
@@ -23,7 +23,7 @@
       </div>
       <div class="campo">
         <label for="f-estado">Estado</label>
-        <select id="f-estado" [(ngModel)]="estadoFiltro" (ngModelChange)="filtrar()">
+        <select id="f-estado" name="estado" [(ngModel)]="estadoFiltro" (ngModelChange)="filtrar()">
           <option [ngValue]="null">Todos</option>
           @for (e of estados; track e) {
             <option [ngValue]="e">{{ e }}</option>
@@ -31,18 +31,40 @@
         </select>
       </div>
       @if (esCoordinacion()) {
+        <div class="campo">
+          <label for="f-texto">Buscar alumno</label>
+          <input
+            id="f-texto"
+            name="texto"
+            type="search"
+            placeholder="Código, nombre o documento"
+            [ngModel]="textoAlumno()"
+            (ngModelChange)="textoAlumno.set($event)"
+          />
+        </div>
         <div class="campo campo-ancho">
           <label for="f-alumno">Alumno</label>
-          <select id="f-alumno" [(ngModel)]="alumnoFiltro" (ngModelChange)="filtrar()">
-            <option [ngValue]="null">Todos</option>
+          <select id="f-alumno" name="alumno" [(ngModel)]="alumnoFiltro" (ngModelChange)="filtrar()">
+            <option [ngValue]="null">Todos ({{ listaAlumnos().length }})</option>
             @for (a of listaAlumnos(); track a.id) {
               <option [ngValue]="a.id">{{ a.codigoEstudiante }} · {{ a.persona.nombreCompleto }}</option>
             }
           </select>
         </div>
       }
+      <div class="campo campo-corto">
+        <label for="f-tamano">Por página</label>
+        <select id="f-tamano" name="tamano" [(ngModel)]="tamano" (ngModelChange)="filtrar()">
+          @for (t of tamanos; track t) {
+            <option [ngValue]="t">{{ t }}</option>
+          }
+        </select>
+      </div>
+      @if (hayFiltros()) {
+        <button type="button" class="boton boton-texto" (click)="limpiarFiltros()">Limpiar filtros</button>
+      }
     </div>
-  </div>
+  </form>
 
   @if (error()) {
     <p class="mensaje mensaje-error" role="alert">{{ error() }}</p>
@@ -50,34 +72,42 @@
 
   <div class="tarjeta">
     @if (loading() && !pagina()) {
-      <p class="estado-carga">Consultando matrículas…</p>
+      <p class="estado-carga" aria-busy="true">Consultando matrículas…</p>
     } @else if (pagina(); as pg) {
-      <div class="tabla-contenedor">
+      <div class="tabla-contenedor" [attr.aria-busy]="loading()">
         <table class="tabla">
+          <caption class="visualmente-oculto">Matrículas, página {{ pg.page.number + 1 }}</caption>
           <thead>
             <tr>
-              <th><span class="visualmente-oculto">Detalle</span></th>
-              <th><button type="button" class="boton-orden" (click)="ordenarPor('id')">N.º {{ indicadorOrden('id') }}</button></th>
+              <th scope="col"><span class="visualmente-oculto">Ver cursos</span></th>
+              <th scope="col" [attr.aria-sort]="orden().campo === 'id' ? (orden().direccion === 'asc' ? 'ascending' : 'descending') : null">
+                <button type="button" class="boton-orden" (click)="ordenarPor('id')">N.º {{ indicadorOrden('id') }}</button>
+              </th>
               @if (esCoordinacion()) {
-                <th>Alumno</th>
+                <th scope="col">Alumno</th>
               }
-              <th>Periodo</th>
-              <th><button type="button" class="boton-orden" (click)="ordenarPor('fecha')">Fecha {{ indicadorOrden('fecha') }}</button></th>
-              <th><button type="button" class="boton-orden" (click)="ordenarPor('estado')">Estado {{ indicadorOrden('estado') }}</button></th>
-              <th class="col-num">Cursos</th>
-              <th class="col-num">Créditos</th>
-              <th>Cargo</th>
-              <th class="col-acciones"><span class="visualmente-oculto">Acciones</span></th>
+              <th scope="col">Periodo</th>
+              <th scope="col" class="col-secundaria" [attr.aria-sort]="orden().campo === 'fecha' ? (orden().direccion === 'asc' ? 'ascending' : 'descending') : null">
+                <button type="button" class="boton-orden" (click)="ordenarPor('fecha')">Fecha {{ indicadorOrden('fecha') }}</button>
+              </th>
+              <th scope="col" [attr.aria-sort]="orden().campo === 'estado' ? (orden().direccion === 'asc' ? 'ascending' : 'descending') : null">
+                <button type="button" class="boton-orden" (click)="ordenarPor('estado')">Estado {{ indicadorOrden('estado') }}</button>
+              </th>
+              <th scope="col" class="col-num col-secundaria">Cursos</th>
+              <th scope="col" class="col-num">Créditos</th>
+              <th scope="col">Cargo</th>
+              <th scope="col" class="col-acciones"><span class="visualmente-oculto">Acciones</span></th>
             </tr>
           </thead>
           <tbody>
             @for (m of pg.content; track m.id) {
-              <tr>
+              <tr [class.anulada]="m.estado === estadoAnulada">
                 <td>
                   <button
                     type="button"
                     class="boton boton-texto boton-pequeno"
                     [attr.aria-expanded]="expandida() === m.id"
+                    [attr.aria-controls]="'detalle-' + m.id"
                     (click)="alternar(m.id)"
                   >
                     @if (expandida() === m.id) {
@@ -90,12 +120,12 @@
                 </td>
                 <td class="celda-principal num">{{ m.id }}</td>
                 @if (esCoordinacion()) {
-                  <td>{{ alumno(m.estudianteId) }}</td>
+                  <td class="celda-alumno">{{ alumno(m.estudianteId) }}</td>
                 }
                 <td>{{ codigoPeriodo(m.periodoId) }}</td>
-                <td class="num">{{ m.fecha | date: 'dd/MM/yyyy' }}</td>
+                <td class="num col-secundaria">{{ m.fecha | date: 'dd/MM/yyyy' }}</td>
                 <td><app-etiqueta-estado [estado]="m.estado" /></td>
-                <td class="col-num">{{ m.detalles.length }}</td>
+                <td class="col-num col-secundaria">{{ m.detalles.length }}</td>
                 <td class="col-num">{{ m.totalCreditos ?? '—' }}</td>
                 <td>
                   @if (m.cargo; as c) {
@@ -106,37 +136,47 @@
                   }
                 </td>
                 <td class="col-acciones">
-                  <a class="boton boton-texto boton-pequeno" [routerLink]="['/matricula/consulta', m.id]">
+                  <a class="boton boton-texto boton-pequeno" [routerLink]="['/matricula/consulta', m.id]" [attr.aria-label]="'Detalle de la matrícula ' + m.id">
                     <svg lucideEye aria-hidden="true"></svg>
                     Detalle
                   </a>
-                  <a class="boton boton-texto boton-pequeno" routerLink="/matricula/horario" [queryParams]="{ matriculaId: m.id }">
-                    <svg lucideCalendarDays aria-hidden="true"></svg>
-                    Horario
-                  </a>
+                  @if (m.estado !== estadoAnulada) {
+                    <a class="boton boton-texto boton-pequeno" routerLink="/matricula/horario" [queryParams]="{ matriculaId: m.id }" [attr.aria-label]="'Horario de la matrícula ' + m.id">
+                      <svg lucideCalendarDays aria-hidden="true"></svg>
+                      Horario
+                    </a>
+                  }
                   @if (esCoordinacion() && m.estado !== estadoAnulada) {
-                    <button type="button" class="boton boton-texto boton-pequeno boton-peligro" (click)="anular(m)">Anular</button>
+                    <button type="button" class="boton boton-texto boton-pequeno boton-peligro" (click)="anular(m)" [attr.aria-label]="'Anular la matrícula ' + m.id">
+                      Anular
+                    </button>
                   }
                 </td>
               </tr>
               @if (expandida() === m.id) {
-                <tr class="fila-detalle">
+                <tr class="fila-detalle" [id]="'detalle-' + m.id">
                   <td></td>
                   <td [attr.colspan]="esCoordinacion() ? 9 : 8">
                     <table class="tabla tabla-interna">
+                      <caption class="visualmente-oculto">Cursos de la matrícula {{ m.id }}</caption>
                       <thead>
                         <tr>
-                          <th>Curso</th>
-                          <th>Sección</th>
-                          <th class="col-num">Créditos</th>
-                          <th>Resultado</th>
+                          <th scope="col">Curso</th>
+                          <th scope="col">Sección</th>
+                          <th scope="col" class="col-secundaria">Docente</th>
+                          <th scope="col">Horario</th>
+                          <th scope="col" class="col-num">Créditos</th>
+                          <th scope="col">Resultado</th>
                         </tr>
                       </thead>
                       <tbody>
                         @for (d of m.detalles; track d.id) {
+                          @let s = seccion(d.seccionId);
                           <tr>
                             <td>{{ curso(d.cursoId) }}</td>
-                            <td>{{ grupo(d.seccionId) }}</td>
+                            <td>{{ s?.grupo ?? '—' }}</td>
+                            <td class="col-secundaria">{{ s ? (s.docenteNombre ?? 'Por asignar') : '—' }}</td>
+                            <td class="texto-pequeno">{{ s ? resumenHorario(s.horarios) || 'Sin horario' : 'Sección no disponible' }}</td>
                             <td class="col-num">{{ d.creditos ?? '—' }}</td>
                             <td>
                               @if (d.resultado) {
@@ -155,12 +195,16 @@
             } @empty {
               <tr>
                 <td [attr.colspan]="esCoordinacion() ? 10 : 9">
-                  <div class="estado-vacio">
-                    <strong>No hay matrículas para este filtro</strong>
-                    @if (!esCoordinacion()) {
-                      Cuando registres tu matrícula aparecerá aquí.
-                    }
-                  </div>
+                  <app-estado-vacio
+                    titulo="No hay matrículas para este filtro"
+                    [descripcion]="
+                      hayFiltros()
+                        ? 'Cambia o limpia los filtros para ver otras matrículas.'
+                        : esCoordinacion()
+                          ? 'Todavía no se registran matrículas.'
+                          : 'Cuando registres tu matrícula aparecerá aquí.'
+                    "
+                  />
                 </td>
               </tr>
             }

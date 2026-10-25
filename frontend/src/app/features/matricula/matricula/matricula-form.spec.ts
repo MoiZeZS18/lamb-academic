@@ -38,7 +38,27 @@ const OFERTA = [
   seccion(1003, 3, 'IS103', 3, 'LUNES', '10:00', '12:00', { vacantesDisponibles: 0, cuposOcupados: 2, limiteVacantes: 2 }),
 ];
 
+const ALUMNOS = [
+  alumno(1001, '2026100001', 'Quispe Mamani Ana Lucia', '70000001'),
+  alumno(1033, '2026100033', 'Apaza Condori Jose Luis', '70000033'),
+];
+
+function alumno(id: number, codigoEstudiante: string, nombreCompleto: string, numeroDocumento: string) {
+  return {
+    id,
+    codigoEstudiante,
+    estado: 'ACTIVO',
+    fechaIngreso: '2026-03-01',
+    habilitado: true,
+    persona: { id, numeroDocumento, nombreCompleto, email: null, idEscuela: 1, escuelaNombre: 'Sistemas' },
+  };
+}
+
 type Interno = {
+  busquedaAlumno: { set(v: string): void };
+  alumnosFiltrados(): { id: number }[];
+  bloqueosEnvio(): string[];
+  form: { controls: { estudianteId: { setValue(v: number): void } } };
   elegirSeccion(s: Seccion): void;
   quitarLinea(i: number): void;
   confirmarYRegistrar(): void;
@@ -53,8 +73,9 @@ describe('MatriculaForm (cabecera-detalle, S9)', () => {
   let backend: HttpTestingController;
   let confirmacion: boolean;
 
-  async function crear() {
-    iniciarSesionDePrueba(['ESTUDIANTE'], 1033);
+  async function crear(roles = ['ESTUDIANTE']) {
+    const estudiante = roles.includes('ESTUDIANTE');
+    iniciarSesionDePrueba(roles, estudiante ? 1033 : undefined);
     await TestBed.configureTestingModule({
       imports: [MatriculaForm],
       providers: [
@@ -69,7 +90,11 @@ describe('MatriculaForm (cabecera-detalle, S9)', () => {
     fixture.detectChanges();
     backend.expectOne(`${API}/periodos`).flush([PERIODO]);
     backend.expectOne((r) => r.url === `${API}/secciones`).flush(OFERTA);
-    backend.expectOne((r) => r.url === `${API}/matriculas`).flush({ content: [], page: { size: 20, number: 0, totalElements: 0, totalPages: 0 } });
+    if (estudiante) {
+      backend.expectOne((r) => r.url === `${API}/matriculas`).flush({ content: [], page: { size: 20, number: 0, totalElements: 0, totalPages: 0 } });
+    } else {
+      backend.expectOne((r) => r.url === `${API}/alumnos` && r.params.get('estado') === 'ACTIVO').flush(ALUMNOS);
+    }
     await fixture.whenStable();
     return { fixture, c: fixture.componentInstance as unknown as Interno };
   }
@@ -86,9 +111,37 @@ describe('MatriculaForm (cabecera-detalle, S9)', () => {
   afterEach(() => backend.verify());
 
   it('el ESTUDIANTE no elige alumno: usa el alumno_id de su token', async () => {
-    const { fixture } = await crear();
+    const { fixture, c } = await crear();
     const html = fixture.nativeElement as HTMLElement;
-    expect(html.querySelector<HTMLInputElement>('input[aria-label=Alumno]')!.readOnly).toBe(true);
+    expect(html.querySelector('#alumno')).toBeNull();
+    expect(html.querySelector('#buscar-alumno')).toBeNull();
+    expect(html.querySelector('.panel-lateral')!.textContent).toContain('Usuario Prueba');
+    expect(c.bloqueosEnvio()).not.toContain('Elige el alumno.');
+  });
+
+  it('la COORDINACION busca al alumno por codigo, nombre o documento', async () => {
+    const { fixture, c } = await crear(['COORDINADOR']);
+    const html = fixture.nativeElement as HTMLElement;
+    expect(html.querySelector('#alumno')).not.toBeNull();
+    expect(c.bloqueosEnvio()).toContain('Elige el alumno.');
+    c.busquedaAlumno.set('apaza');
+    expect(c.alumnosFiltrados().map((a) => a.id)).toEqual([1033]);
+    c.busquedaAlumno.set('70000001');
+    expect(c.alumnosFiltrados().map((a) => a.id)).toEqual([1001]);
+    c.form.controls.estudianteId.setValue(1033);
+    backend.match((r) => r.url === `${API}/matriculas`).forEach((r) => r.flush({ content: [], page: { size: 20, number: 0, totalElements: 0, totalPages: 0 } }));
+    // El alumno elegido se conserva en la lista aunque ya no coincida con la busqueda.
+    expect(c.alumnosFiltrados().map((a) => a.id)).toEqual([1001, 1033]);
+    expect(c.bloqueosEnvio()).not.toContain('Elige el alumno.');
+  });
+
+  it('el panel lista lo que falta antes de registrar', async () => {
+    const { c } = await crear();
+    expect(c.bloqueosEnvio()).toEqual(['Elige al menos un curso.']);
+    c.elegirSeccion(OFERTA[0]);
+    c.elegirSeccion(OFERTA[2]);
+    responderPrerrequisitos();
+    expect(c.bloqueosEnvio()).toEqual(['1 cruce(s) de horario.']);
   });
 
   it('calcula los creditos en vivo al agregar y quitar lineas', async () => {

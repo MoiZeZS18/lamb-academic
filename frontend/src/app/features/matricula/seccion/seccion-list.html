@@ -65,13 +65,14 @@
         <table class="tabla">
           <thead>
             <tr>
-              <th>Curso</th>
-              <th>Grupo</th>
-              <th>Periodo</th>
-              <th>Docente</th>
-              <th>Horario</th>
-              <th class="col-num">Vacantes</th>
-              <th>Estado</th>
+              <th scope="col">Curso</th>
+              <th scope="col">Grupo</th>
+              <th scope="col" class="col-secundaria">Periodo</th>
+              <th scope="col">Docente</th>
+              <th scope="col">Horario</th>
+              <th scope="col" class="col-num">Ocupados / capacidad</th>
+              <th scope="col" class="col-num">Disponibles</th>
+              <th scope="col">Estado</th>
               @if (puedeGestionar()) {
                 <th class="col-acciones"><span class="visualmente-oculto">Acciones</span></th>
               }
@@ -85,15 +86,16 @@
                   <div class="texto-secundario texto-pequeno">{{ seccion.curso.nombre }} · {{ seccion.curso.creditos }} cr.</div>
                 </td>
                 <td>{{ seccion.grupo }}</td>
-                <td>{{ codigoPeriodo(seccion.periodoId) }}</td>
+                <td class="col-secundaria">{{ codigoPeriodo(seccion.periodoId) }}</td>
                 <td>{{ seccion.docenteNombre ?? 'Sin asignar' }}</td>
                 <td class="texto-pequeno">{{ resumenHorario(seccion.horarios) || 'Sin horario' }}</td>
                 <td class="col-num">
-                  <span class="num">{{ seccion.cuposOcupados }}/{{ seccion.limiteVacantes }}</span>
-                  <div class="barra" [class.llena]="seccion.vacantesDisponibles === 0">
+                  <span class="num">{{ seccion.cuposOcupados }} / {{ seccion.limiteVacantes }}</span>
+                  <div class="barra" [class.llena]="seccion.vacantesDisponibles === 0" [attr.aria-label]="ocupacion(seccion) + ' % ocupado'" role="img">
                     <span [style.width.%]="ocupacion(seccion)"></span>
                   </div>
                 </td>
+                <td class="col-num num" [class.texto-error]="seccion.vacantesDisponibles <= 0">{{ seccion.vacantesDisponibles }}</td>
                 <td><app-etiqueta-estado [estado]="seccion.estado" /></td>
                 @if (puedeGestionar()) {
                   <td class="col-acciones">
@@ -101,7 +103,13 @@
                       <svg lucidePencil aria-hidden="true"></svg>
                       Editar
                     </a>
-                    <button type="button" class="boton boton-texto boton-pequeno boton-peligro" (click)="eliminar(seccion)">
+                    <button
+                      type="button"
+                      class="boton boton-texto boton-pequeno boton-peligro"
+                      [disabled]="!!motivoNoEliminable(seccion)"
+                      [attr.title]="motivoNoEliminable(seccion)"
+                      (click)="eliminar(seccion)"
+                    >
                       <svg lucideTrash aria-hidden="true"></svg>
                       Eliminar
                     </button>
@@ -111,7 +119,7 @@
             } @empty {
               @if (!error()) {
                 <tr>
-                  <td colspan="8">
+                  <td colspan="9">
                     <div class="estado-vacio">
                       <strong>No hay secciones para este filtro</strong>
                       Cambia el periodo, el curso o el estado.

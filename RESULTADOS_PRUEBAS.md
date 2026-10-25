@@ -3,6 +3,20 @@
 Rama `integracion/backend-unificado` · Oracle AI Database 26ai Free (`lamb-academic-oracle`,
 esquema `LAMB_APP`) · Java 21.0.12 · Spring Boot 4.0.8.
 
+## U2-M. Mejora integral del frontend de Matrícula (2026-10-25, rama `unidad2/mejora-frontend-matricula`)
+
+Cambios solo en la SPA (detalle en `docs/FRONTEND_MATRICULA.md` §7); backend, Keycloak y Oracle sin cambios.
+
+| Verificación | Resultado |
+|---|---|
+| Frontend `ng test` | 86/86 (20 archivos; 19 pruebas nuevas: portal por rol, horario de estudiante y de coordinación, reportes e `indicadoresCargos`, secciones, búsqueda de alumno y pendientes de la inscripción, avisos de periodos, `EstadoVacio`) |
+| Frontend `ng build` (producción) | Correcto, sin advertencias de presupuesto |
+| Backend `mvnw test` | 104/104 |
+| `verificar_keycloak.py` · `matriz_accesos.py` · `e2e_repetible.py` | 8/8 · 22/22 · 101/101 (limpieza: conteos de las 19 tablas iguales al inicio) |
+| Navegador real (Keycloak + backend + Oracle) | Coordinador: portal, inscripción, consulta, detalle, horario, secciones (diálogo cancelado), reportes. Estudiante `ana.quispe`: portal con su matrícula y saldo real, horario sin búsqueda, 403 al abrir la matrícula de otro estudiante, `/matricula/reportes` → “Acceso no permitido”. Admin: avisos del formulario de periodos (sin guardar) y diálogo de eliminación (cancelado) |
+| Anchos 1440 px y 375 px | Sin desplazamiento horizontal de la página (se corrigió un texto oculto que desbordaba las tablas); agenda por día y menú con fondo y cierre con Escape en móvil |
+| Huella de Oracle | Idéntica antes y después de la verificación en el navegador y del E2E |
+
 ## U2-R. Revisión de idioma y de la guía S7 (2026-10-24)
 
 Correcciones: mensajes visibles de la SPA sin anglicismos ni la palabra “backend”; mensajes 401/403

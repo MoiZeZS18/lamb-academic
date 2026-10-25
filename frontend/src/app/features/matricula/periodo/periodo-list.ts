@@ -49,9 +49,12 @@ export class PeriodoList implements OnInit {
 
   eliminar(periodo: Periodo): void {
     confirmar(this.dialog, {
-      titulo: 'Eliminar periodo',
-      mensaje: `Se eliminará el periodo ${periodo.codigo} (${periodo.nombre}). Esta acción no se puede deshacer.`,
-      confirmar: 'Eliminar',
+      titulo: `Eliminar el periodo ${periodo.codigo}`,
+      mensaje:
+        'El periodo se borrará de forma definitiva. Solo es posible si no tiene matrículas ni secciones ' +
+        'programadas; si las tiene, el sistema lo rechazará y el periodo se conservará.',
+      detalle: [`${periodo.nombre}`, `Estado: ${periodo.estado}`],
+      confirmar: 'Eliminar definitivamente',
       peligro: true,
     }).subscribe((ok) => {
       if (!ok) return;

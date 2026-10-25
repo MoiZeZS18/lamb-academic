@@ -14,6 +14,18 @@
       @if (error()) {
         <p class="mensaje mensaje-error" role="alert">{{ error() }}</p>
       }
+      @if (estadoOriginal() === 'CERRADO') {
+        <p class="mensaje mensaje-info" role="status">
+          Este periodo está cerrado: no admite nuevas secciones ni matrículas, y sus secciones se conservan como historia
+          académica.
+        </p>
+      }
+      @if (estadoElegido() === 'ACTIVO' && otroActivo(); as otro) {
+        <p class="mensaje mensaje-alerta" role="status">
+          El periodo {{ otro.codigo }} también está activo. La inscripción usa el periodo activo de inicio más reciente;
+          revisa que solo uno quede activo.
+        </p>
+      }
 
       <div class="campos">
         <div class="campo">

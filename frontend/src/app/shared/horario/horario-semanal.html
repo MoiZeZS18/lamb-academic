@@ -1,0 +1,90 @@
+<!-- Vista de cuadricula semanal (pantallas medianas y grandes) -->
+<div class="semana" role="table" [attr.aria-label]="titulo()">
+  <div class="fila-encabezado" role="row" [style.grid-template-columns]="columnas()">
+    <div class="esquina" role="columnheader"><span class="visualmente-oculto">Hora</span></div>
+    @for (dia of dias(); track dia) {
+      <div class="dia" role="columnheader" [class.hoy]="dia === hoy" [attr.aria-current]="dia === hoy ? 'date' : null">
+        <span class="dia-largo">{{ nombreDia[dia] }}</span>
+        <span class="dia-corto">{{ diaCorto[dia] }}</span>
+      </div>
+    }
+  </div>
+  <div class="cuerpo-semana" [style.height.px]="altoTotal()" [style.grid-template-columns]="columnas()">
+    <div class="horas" aria-hidden="true">
+      @for (hora of horas(); track hora) {
+        <span [style.top.px]="(hora - horaInicio()) * altoHora">{{ hora < 10 ? '0' + hora : hora }}:00</span>
+      }
+    </div>
+    @for (dia of dias(); track dia) {
+      <div class="columna" [class.hoy]="dia === hoy" role="row" [attr.aria-label]="nombreDia[dia]">
+        @for (hora of horas(); track hora) {
+          <span class="linea" [style.top.px]="(hora - horaInicio()) * altoHora"></span>
+          @if (hora < horaFin()) {
+            <span class="linea media" [style.top.px]="(hora - horaInicio() + 0.5) * altoHora"></span>
+          }
+        }
+        @for (ubicado of bloquesDe(dia); track ubicado.bloque.clave + ubicado.bloque.inicio) {
+          @let bloque = ubicado.bloque;
+          <div
+            class="bloque"
+            [style.left]="'calc(' + (100 / ubicado.carriles) * ubicado.carril + '% + 3px)'"
+            [style.width]="'calc(' + 100 / ubicado.carriles + '% - 6px)'"
+            role="cell"
+            [class]="'bloque color-' + color(bloque)"
+            [class.conflicto]="bloque.conflicto"
+            [class.corto]="duracion(bloque) < 75"
+            [style.top.px]="posicion(bloque.inicio)"
+            [style.height.px]="posicion(bloque.fin) - posicion(bloque.inicio)"
+            [attr.title]="(bloque.nombre ?? bloque.titulo) + ' · ' + bloque.inicio + '–' + bloque.fin"
+          >
+            <strong>{{ bloque.titulo }}</strong>
+            <span class="hora">{{ bloque.inicio }}–{{ bloque.fin }}</span>
+            @if (bloque.subtitulo) {
+              <span>{{ bloque.subtitulo }}</span>
+            }
+            @if (bloque.detalle) {
+              <span class="detalle">{{ bloque.detalle }}</span>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Vista de agenda (pantallas angostas): la misma informacion, por dia -->
+<div class="agenda" [attr.aria-label]="titulo()">
+  @for (d of agenda(); track d.dia) {
+    <section class="agenda-dia" [class.hoy]="d.dia === hoy">
+      <h3>{{ nombreDia[d.dia] }}@if (d.dia === hoy) {<span class="texto-secundario texto-pequeno"> · hoy</span>}</h3>
+      <ul>
+        @for (b of d.clases; track b.clave + b.inicio) {
+          <li class="agenda-clase" [class]="'agenda-clase color-' + color(b)" [class.conflicto]="b.conflicto">
+            <span class="agenda-hora num">{{ b.inicio }}–{{ b.fin }}</span>
+            <span class="agenda-datos">
+              <strong>{{ b.nombre ?? b.titulo }}</strong>
+              <span class="texto-pequeno">{{ b.titulo }}{{ b.subtitulo ? ' · ' + b.subtitulo : '' }}</span>
+              @if (b.detalle) {
+                <span class="texto-pequeno texto-secundario">{{ b.detalle }}</span>
+              }
+            </span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</div>
+
+@if (mostrarLeyenda() && leyenda().length) {
+  <ul class="leyenda" aria-label="Cursos del horario">
+    @for (item of leyenda(); track item.grupo) {
+      <li>
+        <span class="muestra" [class]="'muestra color-' + item.color" aria-hidden="true"></span>
+        <strong>{{ item.titulo }}</strong>
+        @if (item.nombre) {
+          <span class="texto-secundario">{{ item.nombre }}</span>
+        }
+      </li>
+    }
+  </ul>
+}

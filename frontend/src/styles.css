@@ -52,7 +52,7 @@ body {
 
 body {
   font-family: var(--lamb-fuente);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
   color: var(--lamb-gris-900);
   background: var(--lamb-gris-50);
@@ -70,7 +70,8 @@ h4 {
 }
 
 h1 {
-  font-size: 1.5rem;
+  font-size: 1.625rem;
+  letter-spacing: -0.005em;
 }
 
 h2 {
@@ -94,7 +95,7 @@ a:hover {
 }
 
 :focus-visible {
-  outline: 2px solid var(--lamb-turquesa-500);
+  outline: 2px solid var(--lamb-turquesa-600);
   outline-offset: 2px;
 }
 
@@ -124,8 +125,58 @@ a:hover {
 .pagina {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  max-width: 1280px;
+  gap: 1.5rem;
+  max-width: 1600px;
+}
+
+/* Contenido principal con panel lateral (resumen, filtros) en pantallas anchas */
+.distribucion-con-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.distribucion-con-panel > .panel-lateral {
+  position: sticky;
+  top: 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.columna-principal {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+@media (max-width: 1199px) {
+  .distribucion-con-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .distribucion-con-panel > .panel-lateral {
+    position: static;
+  }
+}
+
+/* Enlace de accesibilidad: aparece solo al recibir foco con el teclado */
+.saltar-contenido {
+  position: absolute;
+  left: 1rem;
+  top: -48px;
+  z-index: 100;
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--lamb-radio);
+  background: var(--lamb-blanco);
+  color: var(--lamb-marino-800);
+  font-weight: 600;
+}
+
+.saltar-contenido:focus {
+  top: 8px;
 }
 
 .encabezado-pagina {
@@ -402,30 +453,39 @@ input[readonly] {
 
 /* ----------------------------------------------------------------- tablas */
 .tabla-contenedor {
+  /* relative: el texto oculto (position: absolute) de las celdas queda recortado por el desplazamiento. */
+  position: relative;
   overflow-x: auto;
 }
 
 .tabla {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: 14px;
 }
 
 .tabla th {
   text-align: left;
-  font-size: 0.75rem;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--lamb-gris-600);
   background: var(--lamb-gris-50);
-  padding: 0.625rem 0.75rem;
+  padding: 0.625rem 0.875rem;
   border-bottom: var(--lamb-borde);
   white-space: nowrap;
 }
 
+/* Columnas secundarias: se ocultan en pantallas medianas para no forzar desplazamiento */
+@media (max-width: 1023px) {
+  .tabla .col-secundaria {
+    display: none;
+  }
+}
+
 .tabla td {
-  padding: 0.625rem 0.75rem;
+  padding: 0.6875rem 0.875rem;
   border-bottom: 1px solid var(--lamb-gris-100);
   vertical-align: top;
 }
@@ -542,7 +602,7 @@ input[readonly] {
 
 .estado-carga {
   color: var(--lamb-gris-600);
-  padding: 1.5rem 0;
+  padding: 2rem 1rem;
   text-align: center;
 }
 
@@ -715,4 +775,26 @@ input[readonly] {
 
 .cdk-overlay-dark-backdrop {
   background: rgba(11, 32, 56, 0.42);
+}
+
+.barra-filtros .campo-corto {
+  flex: 0 0 110px;
+}
+
+.tabla tr.anulada td {
+  color: var(--lamb-gris-600);
+}
+
+.tabla .celda-alumno {
+  min-width: 200px;
+}
+
+.texto-error {
+  color: var(--lamb-error-700);
+  font-weight: 600;
+}
+
+/* Los formularios no se estiran en pantallas anchas: lineas de lectura comodas */
+.formulario-tarjeta {
+  max-width: 960px;
 }

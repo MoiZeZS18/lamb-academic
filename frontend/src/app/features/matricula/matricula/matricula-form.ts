@@ -11,6 +11,7 @@ import { ROLES_COORDINACION, Rol } from '../../../core/auth/roles';
 import { AvisoService } from '../../../core/services/aviso-service';
 import { cuerpoError, mensajeHttp } from '../../../core/services/error-http';
 import { confirmar } from '../../../shared/componentes/confirmar-dialogo';
+import { EstadoVacio } from '../../../shared/componentes/estado-vacio';
 import { EtiquetaEstado } from '../../../shared/componentes/etiqueta-estado';
 import { BloqueSemanal, HorarioSemanal } from '../../../shared/horario/horario-semanal';
 import { buscarCruces, resumenHorario, seCruzan } from '../../../shared/horario/horario-util';
@@ -48,6 +49,7 @@ interface LineaValor {
     FormsModule,
     RouterLink,
     EtiquetaEstado,
+    EstadoVacio,
     HorarioSemanal,
     LucideCircleAlert,
     LucidePlus,
@@ -84,6 +86,8 @@ export class MatriculaForm implements OnInit {
 
   protected readonly busqueda = signal('');
   protected readonly soloDisponibles = signal(true);
+  /** Coordinacion: texto para filtrar la lista de alumnos (codigo, nombre o documento). */
+  protected readonly busquedaAlumno = signal('');
 
   /** ESTUDIANTE sin rol de personal: matricula solo a si mismo (el backend lo exige igual). */
   protected readonly esEstudiante = computed(
@@ -98,6 +102,22 @@ export class MatriculaForm implements OnInit {
 
   protected readonly valoresDetalles = toSignal(this.form.controls.detalles.valueChanges, {
     initialValue: this.form.controls.detalles.getRawValue(),
+  });
+
+  protected readonly alumnoElegido = toSignal(this.form.controls.estudianteId.valueChanges, {
+    initialValue: this.form.controls.estudianteId.value,
+  });
+
+  /** Alumnos que coinciden con la busqueda; el elegido se conserva aunque no coincida. */
+  protected readonly alumnosFiltrados = computed(() => {
+    const texto = this.busquedaAlumno().trim().toLowerCase();
+    const elegido = this.alumnoElegido();
+    if (!texto) return this.alumnos();
+    return this.alumnos().filter(
+      (a) =>
+        a.id === elegido ||
+        `${a.codigoEstudiante} ${a.persona.nombreCompleto} ${a.persona.numeroDocumento}`.toLowerCase().includes(texto),
+    );
   });
 
   private readonly seccionPorId = computed(() => new Map(this.secciones().map((s) => [s.id, s])));
@@ -311,9 +331,20 @@ export class MatriculaForm implements OnInit {
     });
   }
 
+  /** Mensajes que impiden registrar, para el panel de resumen (sin repetir las validaciones). */
+  protected readonly bloqueosEnvio = computed(() => {
+    const mensajes: string[] = [];
+    if (!this.alumnoElegido()) mensajes.push('Elige el alumno.');
+    if (this.existente()) mensajes.push('El alumno ya tiene una matrícula vigente en el periodo.');
+    if (!this.elegidas().length) mensajes.push('Elige al menos un curso.');
+    if (this.cruces().length) mensajes.push(`${this.cruces().length} cruce(s) de horario.`);
+    if (this.prerrequisitosEnLaMisma().length) mensajes.push('Un curso y su prerrequisito en la misma matrícula.');
+    return mensajes;
+  });
+
   protected nombreAlumno(): string {
     if (this.esEstudiante()) return this.auth.usuario()?.nombre ?? '';
-    const alumno = this.alumnos().find((a) => a.id === this.form.controls.estudianteId.value);
+    const alumno = this.alumnos().find((a) => a.id === this.alumnoElegido());
     return alumno ? `${alumno.codigoEstudiante} · ${alumno.persona.nombreCompleto}` : '';
   }
 

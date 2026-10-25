@@ -3,7 +3,9 @@
     <div>
       <p class="migas">Gestión académica</p>
       <h1>Reportes de matrícula</h1>
-      <p class="descripcion">Indicadores del periodo {{ codigoPeriodo() }} calculados por el servidor con los datos registrados en Oracle.</p>
+      <p class="descripcion">
+        Periodo {{ codigoPeriodo() }}. Cifras calculadas por el servidor con los datos registrados en Oracle.
+      </p>
     </div>
     <div class="acciones no-imprimir">
       <div class="campo">
@@ -26,101 +28,152 @@
   }
 
   @if (loading()) {
-    <p class="estado-carga">Generando reportes…</p>
-  } @else if (total(); as t) {
-    <div class="tarjeta">
-      <div class="cuerpo rejilla rejilla-3">
+    <p class="estado-carga" aria-busy="true">Generando reportes…</p>
+  } @else if (porEstado().length) {
+    <!-- ============ Matricula ============ -->
+    <section class="tarjeta" aria-labelledby="t-matricula">
+      <header><h2 id="t-matricula">Matrícula</h2></header>
+      <div class="cuerpo indicadores-fila">
         <div class="indicador">
-          <span class="valor">{{ t.totalMatriculas }}</span>
-          <span class="etiqueta">Matrículas del periodo</span>
+          <span class="valor">{{ matriculas().activas }}</span>
+          <span class="etiqueta">Matrículas activas (iniciadas y confirmadas)</span>
         </div>
         <div class="indicador">
-          <span class="valor">{{ t.totalDetalles }}</span>
-          <span class="etiqueta">Inscripciones a cursos</span>
+          <span class="valor">{{ matriculas().anuladas }}</span>
+          <span class="etiqueta">Matrículas anuladas</span>
         </div>
         <div class="indicador">
-          <span class="valor">{{ cursosPorMatricula() | number: '1.1-1' }}</span>
-          <span class="etiqueta">Cursos por matrícula</span>
+          <span class="valor">{{ matriculas().cursosActivos }}</span>
+          <span class="etiqueta">Inscripciones a cursos en matrículas activas</span>
+        </div>
+        <div class="indicador">
+          <span class="valor">{{ matriculas().cursosPorMatricula | number: '1.1-1' }}</span>
+          <span class="etiqueta">Cursos por matrícula activa</span>
         </div>
       </div>
-    </div>
-
-    <div class="rejilla rejilla-2">
-      <article class="tarjeta">
-        <header><h2>Matrículas por estado</h2></header>
-        <div class="tabla-contenedor">
-          <table class="tabla">
-            <thead>
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <caption class="visualmente-oculto">Matrículas por estado</caption>
+          <thead>
+            <tr>
+              <th scope="col">Estado</th>
+              <th scope="col" class="col-num">Matrículas</th>
+              <th scope="col" class="col-num">Inscripciones a cursos</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (fila of porEstado(); track fila.estado) {
               <tr>
-                <th>Estado</th>
-                <th class="col-num">Matrículas</th>
-                <th class="col-num">Cursos</th>
+                <td><app-etiqueta-estado [estado]="fila.estado" /></td>
+                <td class="col-num num">{{ fila.reporte.totalMatriculas }}</td>
+                <td class="col-num num">{{ fila.reporte.totalDetalles }}</td>
               </tr>
-            </thead>
-            <tbody>
-              @for (fila of porEstado(); track fila.estado) {
-                <tr>
-                  <td><app-etiqueta-estado [estado]="fila.estado" /></td>
-                  <td class="col-num num">{{ fila.reporte.totalMatriculas }}</td>
-                  <td class="col-num num">{{ fila.reporte.totalDetalles }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </article>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-      <article class="tarjeta">
-        <header><h2>Cargos de matrícula y otros</h2></header>
+    <!-- ============ Cargos ============ -->
+    <section class="tarjeta" aria-labelledby="t-cargos">
+      <header>
+        <div>
+          <h2 id="t-cargos">Cargos financieros del periodo</h2>
+          <p class="texto-secundario texto-pequeno">
+            Incluye los cargos de matrícula y los demás cargos del periodo registrados en Finanzas. Los cargos anulados no
+            son deuda: quedan con saldo cero y no admiten pagos.
+          </p>
+        </div>
+      </header>
+      @if (cargos().length) {
+        <div class="cuerpo indicadores-fila">
+          <div class="indicador">
+            <span class="valor">{{ finanzas().montoVigente | currency: 'PEN' : 'S/' }}</span>
+            <span class="etiqueta">Cargos vigentes ({{ finanzas().cantidadVigentes }})</span>
+          </div>
+          <div class="indicador">
+            <span class="valor valor-ok">{{ finanzas().pagado | currency: 'PEN' : 'S/' }}</span>
+            <span class="etiqueta">Pagos realizados</span>
+          </div>
+          <div class="indicador">
+            <span class="valor valor-alerta">{{ finanzas().saldoPendiente | currency: 'PEN' : 'S/' }}</span>
+            <span class="etiqueta">Saldo pendiente de cobro</span>
+          </div>
+          <div class="indicador">
+            <span class="valor valor-neutro">{{ finanzas().montoAnulado | currency: 'PEN' : 'S/' }}</span>
+            <span class="etiqueta">Cargos anulados ({{ finanzas().cantidadAnulados }}), no cobrables</span>
+          </div>
+          <div class="indicador">
+            <span class="valor valor-neutro">{{ finanzas().montoHistorico | currency: 'PEN' : 'S/' }}</span>
+            <span class="etiqueta">Total histórico emitido ({{ finanzas().cantidadHistorica }}, incluye anulados)</span>
+          </div>
+        </div>
         <div class="tabla-contenedor">
           <table class="tabla">
+            <caption class="visualmente-oculto">Cargos por estado</caption>
             <thead>
               <tr>
-                <th>Estado</th>
-                <th class="col-num">Cargos</th>
-                <th class="col-num">Monto</th>
-                <th class="col-num">Saldo</th>
+                <th scope="col">Estado</th>
+                <th scope="col" class="col-num">Cargos</th>
+                <th scope="col" class="col-num">Monto emitido</th>
+                <th scope="col" class="col-num">Pagado</th>
+                <th scope="col" class="col-num">Saldo pendiente</th>
               </tr>
             </thead>
             <tbody>
               @for (c of cargos(); track c.estado) {
-                <tr>
+                <tr [class.anulada]="c.estado === 'ANULADO'">
                   <td><app-etiqueta-estado [estado]="c.estado" /></td>
                   <td class="col-num num">{{ c.cantidad }}</td>
                   <td class="col-num num">{{ c.montoTotal | currency: 'PEN' : 'S/' }}</td>
+                  <td class="col-num num">
+                    @if (c.estado === 'ANULADO') {
+                      <span class="texto-secundario">No aplica</span>
+                    } @else {
+                      {{ pagadoDe(c) | currency: 'PEN' : 'S/' }}
+                    }
+                  </td>
                   <td class="col-num num">{{ c.saldoPendiente | currency: 'PEN' : 'S/' }}</td>
-                </tr>
-              } @empty {
-                <tr>
-                  <td colspan="4"><div class="estado-vacio">Sin cargos emitidos en el periodo.</div></td>
                 </tr>
               }
             </tbody>
-            @if (cargos().length) {
-              <tfoot>
-                <tr>
-                  <td>Total</td>
-                  <td class="col-num num">{{ totalesCargos().cantidad }}</td>
-                  <td class="col-num num">{{ totalesCargos().monto | currency: 'PEN' : 'S/' }}</td>
-                  <td class="col-num num">{{ totalesCargos().saldo | currency: 'PEN' : 'S/' }}</td>
-                </tr>
-              </tfoot>
-            }
+            <tfoot>
+              <tr>
+                <td>Vigentes</td>
+                <td class="col-num num">{{ finanzas().cantidadVigentes }}</td>
+                <td class="col-num num">{{ finanzas().montoVigente | currency: 'PEN' : 'S/' }}</td>
+                <td class="col-num num">{{ finanzas().pagado | currency: 'PEN' : 'S/' }}</td>
+                <td class="col-num num">{{ finanzas().saldoPendiente | currency: 'PEN' : 'S/' }}</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
-      </article>
-    </div>
+      } @else {
+        <app-estado-vacio titulo="Sin cargos en el periodo" descripcion="Finanzas no registra cargos para este periodo." />
+      }
+    </section>
 
-    <article class="tarjeta">
-      <header><h2>Ocupación de vacantes por curso</h2></header>
+    <!-- ============ Ocupacion ============ -->
+    <section class="tarjeta" aria-labelledby="t-ocupacion">
+      <header>
+        <div>
+          <h2 id="t-ocupacion">Ocupación de vacantes por curso</h2>
+          <p class="texto-secundario texto-pequeno">
+            Capacidad total: suma del límite de vacantes de las secciones no canceladas. Disponibles = capacidad − ocupados.
+          </p>
+        </div>
+      </header>
       <div class="tabla-contenedor">
         <table class="tabla">
+          <caption class="visualmente-oculto">Ocupación por curso</caption>
           <thead>
             <tr>
-              <th>Curso</th>
-              <th class="col-num">Secciones</th>
-              <th class="col-num">Ocupados / vacantes</th>
-              <th>Ocupación</th>
+              <th scope="col">Curso</th>
+              <th scope="col" class="col-num">Secciones</th>
+              <th scope="col" class="col-num">Capacidad total</th>
+              <th scope="col" class="col-num">Ocupados</th>
+              <th scope="col" class="col-num">Disponibles</th>
+              <th scope="col">Ocupación</th>
             </tr>
           </thead>
           <tbody>
@@ -131,10 +184,14 @@
                   <span class="texto-secundario"> · {{ o.cursoNombre }}</span>
                 </td>
                 <td class="col-num num">{{ o.secciones }}</td>
-                <td class="col-num num">{{ o.cuposOcupados }} / {{ o.vacantesTotales }}</td>
+                <td class="col-num num">{{ o.vacantesTotales }}</td>
+                <td class="col-num num">{{ o.cuposOcupados }}</td>
+                <td class="col-num num" [class.texto-error]="o.vacantesTotales - o.cuposOcupados <= 0">
+                  {{ o.vacantesTotales - o.cuposOcupados }}
+                </td>
                 <td>
                   <div class="ocupacion">
-                    <div class="barra" [class.llena]="porcentaje(o) >= 100">
+                    <div class="barra" [class.llena]="porcentaje(o) >= 100" role="img" [attr.aria-label]="porcentaje(o) + ' % ocupado'">
                       <span [style.width.%]="porcentaje(o)"></span>
                     </div>
                     <span class="num texto-pequeno">{{ porcentaje(o) }} %</span>
@@ -143,12 +200,26 @@
               </tr>
             } @empty {
               <tr>
-                <td colspan="4"><div class="estado-vacio">El periodo no tiene secciones programadas.</div></td>
+                <td colspan="6">
+                  <app-estado-vacio titulo="Sin secciones" descripcion="El periodo no tiene secciones programadas." />
+                </td>
               </tr>
             }
           </tbody>
+          @if (ocupacion().length) {
+            <tfoot>
+              <tr>
+                <td>Total</td>
+                <td></td>
+                <td class="col-num num">{{ totalesOcupacion().capacidad }}</td>
+                <td class="col-num num">{{ totalesOcupacion().ocupados }}</td>
+                <td class="col-num num">{{ totalesOcupacion().capacidad - totalesOcupacion().ocupados }}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          }
         </table>
       </div>
-    </article>
+    </section>
   }
 </section>

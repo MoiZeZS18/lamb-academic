@@ -5,314 +5,354 @@
       <h1>Inscripción de cursos</h1>
       @if (periodo(); as p) {
         <p class="descripcion">
-          Periodo {{ p.codigo }} · {{ p.nombre }}. Elige una sección por curso; el sistema valida vacantes, cruces de
-          horario y prerrequisitos al registrar.
+          Periodo {{ p.codigo }} · {{ p.nombre }}. Elige una sección por curso. Al registrar, el sistema vuelve a
+          verificar vacantes, cruces de horario y prerrequisitos.
         </p>
       }
     </div>
   </header>
 
   @if (cargando()) {
-    <p class="estado-carga">Cargando la oferta del periodo…</p>
+    <p class="estado-carga" aria-busy="true">Cargando la oferta del periodo…</p>
   } @else if (errorCarga()) {
     <p class="mensaje mensaje-error" role="alert">
       <svg lucideCircleAlert aria-hidden="true"></svg><span>{{ errorCarga() }}</span>
     </p>
   } @else if (bloqueo(); as motivo) {
     <div class="tarjeta">
-      <div class="cuerpo">
-        <p class="mensaje mensaje-alerta">{{ motivo }}</p>
-      </div>
-      <footer><a class="boton" routerLink="/matricula">Volver al portal</a></footer>
+      <app-estado-vacio titulo="La inscripción no está disponible" [descripcion]="motivo">
+        <a class="boton" routerLink="/matricula">Volver al portal</a>
+      </app-estado-vacio>
     </div>
   } @else {
-    <form [formGroup]="form" class="inscripcion" novalidate>
-      <!-- ============ Cabecera ============ -->
-      <section class="tarjeta" aria-labelledby="t-cabecera">
-        <header><h2 id="t-cabecera">Datos de la matrícula</h2></header>
-        <div class="cuerpo campos">
-          <div class="campo">
-            <span class="etiqueta">Alumno</span>
-            @if (esEstudiante()) {
-              <input type="text" [value]="nombreAlumno()" readonly aria-label="Alumno" />
-            } @else {
-              <select formControlName="estudianteId" (change)="cambiarAlumno()" aria-label="Alumno">
-                <option [ngValue]="0" disabled>Selecciona un alumno</option>
-                @for (alumno of alumnos(); track alumno.id) {
-                  <option [ngValue]="alumno.id" [disabled]="!alumno.habilitado">
-                    {{ alumno.codigoEstudiante }} · {{ alumno.persona.nombreCompleto }}{{ alumno.habilitado ? '' : ' (no habilitado)' }}
+    <form [formGroup]="form" class="distribucion-con-panel" novalidate>
+      <div class="columna-principal">
+        <!-- ============ Alumno (solo coordinacion) ============ -->
+        @if (!esEstudiante()) {
+          <section class="tarjeta" aria-labelledby="t-alumno">
+            <header><h2 id="t-alumno">Alumno</h2></header>
+            <div class="cuerpo campos campos-alumno">
+              <div class="campo">
+                <label for="buscar-alumno">Buscar alumno</label>
+                <input
+                  id="buscar-alumno"
+                  type="search"
+                  placeholder="Código, nombre o documento"
+                  [ngModel]="busquedaAlumno()"
+                  (ngModelChange)="busquedaAlumno.set($event)"
+                  [ngModelOptions]="{ standalone: true }"
+                />
+              </div>
+              <div class="campo campo-doble">
+                <label for="alumno">Alumno a matricular <span class="obligatorio">*</span></label>
+                <select id="alumno" formControlName="estudianteId" (change)="cambiarAlumno()">
+                  <option [ngValue]="0" disabled>
+                    {{ alumnosFiltrados().length ? 'Selecciona un alumno (' + alumnosFiltrados().length + ')' : 'Ningún alumno coincide' }}
                   </option>
-                }
-              </select>
-              @if (form.controls.estudianteId.touched && form.controls.estudianteId.invalid) {
-                <span class="error-campo">Selecciona el alumno.</span>
-              }
-              @if (alumnos().length === 0) {
-                <span class="error-campo">No hay alumnos activos en Base Universal.</span>
-              }
-            }
-          </div>
-          <div class="campo">
-            <span class="etiqueta">Periodo</span>
-            <input type="text" [value]="periodo()?.codigo + ' · ' + periodo()?.nombre" readonly aria-label="Periodo" />
-          </div>
-          <div class="campo">
-            <label for="cuotas">Cuotas del cargo</label>
-            <select id="cuotas" formControlName="numeroCuotas">
-              @for (n of cuotas; track n) {
-                <option [ngValue]="n">{{ n }}</option>
-              }
-            </select>
-            <span class="ayuda">El monto lo calcula Finanzas según los créditos.</span>
-          </div>
-        </div>
-        @if (existente(); as m) {
-          <div class="cuerpo sin-borde">
-            <p class="mensaje mensaje-alerta">
-              Ya existe la matrícula {{ m.id }} ({{ m.estado }}) en este periodo para el alumno. Solo se permite una
-              matrícula vigente por periodo.&nbsp;<a [routerLink]="['/matricula/consulta', m.id]">Ver matrícula</a>
-            </p>
-          </div>
-        }
-      </section>
-
-      <!-- ============ Oferta ============ -->
-      <section class="tarjeta" aria-labelledby="t-oferta">
-        <header>
-          <h2 id="t-oferta">Oferta del periodo</h2>
-          <div class="barra-filtros">
-            <div class="campo buscador">
-              <label for="buscar" class="visualmente-oculto">Buscar curso o docente</label>
-              <svg lucideSearch aria-hidden="true"></svg>
-              <input
-                id="buscar"
-                type="search"
-                placeholder="Buscar curso o docente"
-                [ngModel]="busqueda()"
-                (ngModelChange)="busqueda.set($event)"
-                [ngModelOptions]="{ standalone: true }"
-              />
-            </div>
-            <label class="casilla">
-              <input
-                type="checkbox"
-                [ngModel]="soloDisponibles()"
-                (ngModelChange)="soloDisponibles.set($event)"
-                [ngModelOptions]="{ standalone: true }"
-              />
-              Solo con vacantes
-            </label>
-          </div>
-        </header>
-        <div class="tabla-contenedor">
-          <table class="tabla">
-            <thead>
-              <tr>
-                <th>Curso</th>
-                <th class="col-num">Créd.</th>
-                <th>Sección</th>
-                <th>Docente</th>
-                <th>Horario</th>
-                <th class="col-num">Vacantes</th>
-                <th>Estado</th>
-                <th class="col-acciones"><span class="visualmente-oculto">Elegir</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (s of ofertaFiltrada(); track s.id) {
-                <tr [class.elegida]="indiceDeSeccion(s.id) >= 0">
-                  <td>
-                    <span class="celda-principal">{{ s.curso.codigo }}</span>
-                    <div class="texto-secundario texto-pequeno">{{ s.curso.nombre }}</div>
-                  </td>
-                  <td class="col-num">{{ s.curso.creditos }}</td>
-                  <td>{{ s.grupo }}</td>
-                  <td>{{ s.docenteNombre ?? 'Por asignar' }}</td>
-                  <td class="texto-pequeno">{{ resumenHorario(s.horarios) || 'Sin horario' }}</td>
-                  <td class="col-num num">{{ s.vacantesDisponibles }}/{{ s.limiteVacantes }}</td>
-                  <td><app-etiqueta-estado [estado]="s.estado" /></td>
-                  <td class="col-acciones">
-                    @if (indiceDeSeccion(s.id) >= 0) {
-                      <span class="texto-secundario texto-pequeno">Elegida</span>
-                    } @else {
-                      <button
-                        type="button"
-                        class="boton boton-pequeno"
-                        [disabled]="!disponible(s) || !!existente()"
-                        [attr.title]="disponible(s) ? null : 'Sección sin vacantes o no abierta'"
-                        (click)="elegirSeccion(s)"
-                      >
-                        <svg lucidePlus aria-hidden="true"></svg>
-                        Elegir
-                      </button>
-                    }
-                  </td>
-                </tr>
-              } @empty {
-                <tr>
-                  <td colspan="8">
-                    <div class="estado-vacio">
-                      <strong>No hay secciones para mostrar</strong>
-                      @if (secciones().length === 0) {
-                        El periodo aún no tiene secciones programadas.
-                      } @else {
-                        Ninguna sección coincide con la búsqueda o todas están sin vacantes.
-                      }
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- ============ Detalle (FormArray) ============ -->
-      <section class="tarjeta" aria-labelledby="t-detalle">
-        <header>
-          <h2 id="t-detalle">Cursos a matricular</h2>
-          <span class="texto-secundario">{{ elegidas().length }} curso(s) · <strong class="num">{{ totalCreditos() }}</strong> créditos</span>
-        </header>
-        <div class="tabla-contenedor">
-          <table class="tabla" formArrayName="detalles">
-            <thead>
-              <tr>
-                <th>Curso</th>
-                <th>Sección</th>
-                <th class="col-num">Créd.</th>
-                <th>Horario</th>
-                <th>Prerrequisitos</th>
-                <th><span class="visualmente-oculto">Quitar</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (linea of lineasForm.controls; track linea; let i = $index) {
-                <tr [formGroupName]="i">
-                  <td>
-                    <select formControlName="cursoId" (change)="cambiarCurso(i)" [attr.aria-label]="'Curso de la línea ' + (i + 1)">
-                      <option [ngValue]="0" disabled>Selecciona un curso</option>
-                      @for (curso of cursosOfertados(); track curso.id) {
-                        <option [ngValue]="curso.id">{{ curso.codigo }} · {{ curso.nombre }}</option>
-                      }
-                    </select>
-                  </td>
-                  <td>
-                    <select formControlName="seccionId" [attr.aria-label]="'Sección de la línea ' + (i + 1)">
-                      <option [ngValue]="0" disabled>Sección</option>
-                      @for (s of seccionesDelCurso(linea.controls.cursoId.value); track s.id) {
-                        <option [ngValue]="s.id" [disabled]="!disponible(s)">
-                          {{ s.grupo }} · {{ s.vacantesDisponibles }} vac.{{ s.estado !== 'ABIERTA' ? ' · ' + s.estado : '' }}
-                        </option>
-                      }
-                    </select>
-                  </td>
-                  @if (seccion(linea.controls.seccionId.value); as s) {
-                    <td class="col-num">{{ s.curso.creditos }}</td>
-                    <td class="texto-pequeno">
-                      {{ resumenHorario(s.horarios) || 'Sin horario' }}
-                      <div class="texto-secundario">{{ s.docenteNombre ?? 'Docente por asignar' }}</div>
-                    </td>
-                  } @else {
-                    <td class="col-num">—</td>
-                    <td class="texto-secundario">—</td>
+                  @for (alumno of alumnosFiltrados(); track alumno.id) {
+                    <option [ngValue]="alumno.id" [disabled]="!alumno.habilitado">
+                      {{ alumno.codigoEstudiante }} · {{ alumno.persona.nombreCompleto }}{{ alumno.habilitado ? '' : ' (no habilitado)' }}
+                    </option>
                   }
-                  <td class="texto-pequeno">
-                    @for (pre of prerrequisitosDe(linea.controls.cursoId.value); track pre.id) {
-                      <span class="prerrequisito">{{ pre.codigo }}</span>
-                    } @empty {
-                      <span class="texto-secundario">{{ linea.controls.cursoId.value ? 'Ninguno' : '—' }}</span>
-                    }
-                  </td>
-                  <td class="col-acciones">
-                    <button type="button" class="boton boton-texto boton-pequeno" (click)="quitarLinea(i)">
-                      <svg lucideX aria-hidden="true"></svg>
-                      <span class="visualmente-oculto">Quitar línea {{ i + 1 }}</span>
-                    </button>
-                  </td>
+                </select>
+                @if (form.controls.estudianteId.touched && form.controls.estudianteId.invalid) {
+                  <span class="error-campo">Selecciona el alumno.</span>
+                }
+                @if (alumnos().length === 0) {
+                  <span class="error-campo">No hay alumnos activos en Base Universal.</span>
+                }
+              </div>
+            </div>
+            @if (existente(); as m) {
+              <div class="cuerpo sin-borde-superior">
+                <p class="mensaje mensaje-alerta" role="status">
+                  Este alumno ya tiene la matrícula {{ m.id }} ({{ m.estado }}) en el periodo. Solo se permite una
+                  matrícula vigente por periodo.&nbsp;<a [routerLink]="['/matricula/consulta', m.id]">Ver matrícula</a>
+                </p>
+              </div>
+            }
+          </section>
+        } @else if (existente(); as m) {
+          <p class="mensaje mensaje-alerta" role="status">
+            Ya tienes la matrícula {{ m.id }} ({{ m.estado }}) en este periodo.&nbsp;
+            <a [routerLink]="['/matricula/consulta', m.id]">Ver mi matrícula</a>
+          </p>
+        }
+
+        <!-- ============ Oferta ============ -->
+        <section class="tarjeta" aria-labelledby="t-oferta">
+          <header>
+            <div>
+              <h2 id="t-oferta">Oferta del periodo</h2>
+              <p class="texto-secundario texto-pequeno">
+                {{ ofertaFiltrada().length }} de {{ secciones().length }} secciones · vacantes: disponibles de la capacidad total
+              </p>
+            </div>
+            <div class="barra-filtros">
+              <div class="campo buscador">
+                <label for="buscar" class="visualmente-oculto">Buscar curso o docente</label>
+                <svg lucideSearch aria-hidden="true"></svg>
+                <input
+                  id="buscar"
+                  type="search"
+                  placeholder="Buscar curso o docente"
+                  [ngModel]="busqueda()"
+                  (ngModelChange)="busqueda.set($event)"
+                  [ngModelOptions]="{ standalone: true }"
+                />
+              </div>
+              <label class="casilla">
+                <input
+                  type="checkbox"
+                  [ngModel]="soloDisponibles()"
+                  (ngModelChange)="soloDisponibles.set($event)"
+                  [ngModelOptions]="{ standalone: true }"
+                />
+                Solo con vacantes
+              </label>
+            </div>
+          </header>
+          <div class="tabla-contenedor">
+            <table class="tabla">
+              <caption class="visualmente-oculto">Secciones ofertadas en el periodo</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Curso</th>
+                  <th scope="col">Sección y docente</th>
+                  <th scope="col">Horario</th>
+                  <th scope="col" class="col-num">Vacantes</th>
+                  <th scope="col" class="col-acciones"><span class="visualmente-oculto">Elegir</span></th>
                 </tr>
-                @if (errorLinea(i); as m) {
-                  <tr class="fila-error">
-                    <td colspan="6" class="error-campo">Línea {{ i + 1 }}: {{ m }}</td>
+              </thead>
+              <tbody>
+                @for (s of ofertaFiltrada(); track s.id) {
+                  <tr [class.elegida]="indiceDeSeccion(s.id) >= 0">
+                    <td>
+                      <span class="celda-principal">{{ s.curso.codigo }}</span>
+                      <div class="texto-secundario texto-pequeno">{{ s.curso.nombre }} · {{ s.curso.creditos }} cr.</div>
+                    </td>
+                    <td>
+                      Grupo {{ s.grupo }}
+                      <div class="texto-secundario texto-pequeno">{{ s.docenteNombre ?? 'Docente por asignar' }}</div>
+                    </td>
+                    <td class="texto-pequeno horario-celda">{{ resumenHorario(s.horarios) || 'Sin horario' }}</td>
+                    <td class="col-num celda-cupo">
+                      <span class="num cupo" [class.sin-cupo]="s.vacantesDisponibles <= 0">{{ s.vacantesDisponibles }}</span>
+                      <span class="texto-secundario num"> de {{ s.limiteVacantes }}</span>
+                      <div class="texto-secundario texto-pequeno">{{ s.cuposOcupados }} {{ s.cuposOcupados === 1 ? 'ocupada' : 'ocupadas' }}</div>
+                      @if (s.estado !== 'ABIERTA') {
+                        <app-etiqueta-estado [estado]="s.estado" />
+                      }
+                    </td>
+                    <td class="col-acciones">
+                      @if (indiceDeSeccion(s.id) >= 0) {
+                        <span class="etiqueta-estado estado-info">Elegida</span>
+                      } @else {
+                        <button
+                          type="button"
+                          class="boton boton-pequeno"
+                          [disabled]="!disponible(s) || !!existente()"
+                          [attr.aria-label]="'Elegir ' + s.curso.codigo + ' sección ' + s.grupo"
+                          [attr.title]="disponible(s) ? null : 'Sección sin vacantes o no abierta'"
+                          (click)="elegirSeccion(s)"
+                        >
+                          <svg lucidePlus aria-hidden="true"></svg>
+                          Elegir
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="5">
+                      <app-estado-vacio
+                        titulo="No hay secciones para mostrar"
+                        [descripcion]="
+                          secciones().length === 0
+                            ? 'El periodo aún no tiene secciones programadas.'
+                            : 'Ninguna sección coincide con la búsqueda o todas están sin vacantes.'
+                        "
+                      />
+                    </td>
                   </tr>
                 }
-              } @empty {
-                <tr>
-                  <td colspan="6">
-                    <div class="estado-vacio">
-                      <strong>Aún no hay cursos</strong>
-                      Elige secciones en la oferta o agrega un curso.
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="2">Total</td>
-                <td class="col-num num">{{ totalCreditos() }}</td>
-                <td colspan="3"></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        <div class="cuerpo validaciones">
-          <button type="button" class="boton boton-pequeno" (click)="agregarLinea()" [disabled]="!!existente()">
-            <svg lucidePlus aria-hidden="true"></svg>
-            Agregar curso
-          </button>
-          @if (lineasForm.hasError('sinLineas') && lineasForm.touched) {
-            <p class="error-campo">La matrícula debe tener al menos un curso.</p>
-          }
-          @if (lineasForm.hasError('repetido')) {
-            <p class="error-campo">Hay un curso repetido: elige una sola sección por curso.</p>
-          }
-          @for (aviso of prerrequisitosEnLaMisma(); track aviso) {
-            <p class="error-campo">Prerrequisito: {{ aviso }}</p>
-          }
-          @for (cruce of cruces(); track cruce.a + cruce.b) {
-            <p class="error-campo">Cruce de horario: {{ cruce.descripcion }}.</p>
-          }
-          @if (prerrequisitosPendientes(); as pendientes) {
-            @if (pendientes) {
-              <p class="mensaje mensaje-info texto-pequeno">
-                Los cursos marcados con prerrequisito exigen haber aprobado ese curso en un periodo anterior; el sistema lo
-                verifica con tu historial al registrar.
-              </p>
-            }
-          }
-        </div>
-      </section>
-
-      <!-- ============ Horario de la seleccion ============ -->
-      @if (bloquesHorario().length) {
-        <section class="tarjeta" aria-labelledby="t-horario">
-          <header><h2 id="t-horario">Horario de la selección</h2></header>
-          <div class="cuerpo tabla-contenedor">
-            <app-horario-semanal [bloques]="bloquesHorario()" titulo="Horario de las secciones elegidas" />
+              </tbody>
+            </table>
           </div>
         </section>
-      }
 
-      @if (error()) {
-        <p class="mensaje mensaje-error" role="alert">
-          <svg lucideCircleAlert aria-hidden="true"></svg><span>{{ error() }}</span>
-        </p>
-      }
+        <!-- ============ Detalle (FormArray) ============ -->
+        <section class="tarjeta" aria-labelledby="t-detalle">
+          <header>
+            <h2 id="t-detalle">Cursos elegidos</h2>
+            <button type="button" class="boton boton-pequeno" (click)="agregarLinea()" [disabled]="!!existente()">
+              <svg lucidePlus aria-hidden="true"></svg>
+              Agregar curso
+            </button>
+          </header>
+          <div class="tabla-contenedor">
+            <table class="tabla" formArrayName="detalles">
+              <caption class="visualmente-oculto">Cursos de la matrícula</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Curso</th>
+                  <th scope="col">Sección</th>
+                  <th scope="col" class="col-num">Créd.</th>
+                  <th scope="col">Horario y docente</th>
+                  <th scope="col">Prerrequisitos</th>
+                  <th scope="col"><span class="visualmente-oculto">Quitar</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (linea of lineasForm.controls; track linea; let i = $index) {
+                  <tr [formGroupName]="i">
+                    <td>
+                      <select formControlName="cursoId" (change)="cambiarCurso(i)" [attr.aria-label]="'Curso de la línea ' + (i + 1)">
+                        <option [ngValue]="0" disabled>Selecciona un curso</option>
+                        @for (curso of cursosOfertados(); track curso.id) {
+                          <option [ngValue]="curso.id">{{ curso.codigo }} · {{ curso.nombre }}</option>
+                        }
+                      </select>
+                    </td>
+                    <td>
+                      <select formControlName="seccionId" [attr.aria-label]="'Sección de la línea ' + (i + 1)">
+                        <option [ngValue]="0" disabled>Sección</option>
+                        @for (s of seccionesDelCurso(linea.controls.cursoId.value); track s.id) {
+                          <option [ngValue]="s.id" [disabled]="!disponible(s)">
+                            {{ s.grupo }} · {{ s.vacantesDisponibles }} disponibles{{ s.estado !== 'ABIERTA' ? ' · ' + s.estado : '' }}
+                          </option>
+                        }
+                      </select>
+                    </td>
+                    @if (seccion(linea.controls.seccionId.value); as s) {
+                      <td class="col-num num">{{ s.curso.creditos }}</td>
+                      <td class="texto-pequeno">
+                        {{ resumenHorario(s.horarios) || 'Sin horario' }}
+                        <div class="texto-secundario">{{ s.docenteNombre ?? 'Docente por asignar' }}</div>
+                      </td>
+                    } @else {
+                      <td class="col-num">—</td>
+                      <td class="texto-secundario">—</td>
+                    }
+                    <td class="texto-pequeno">
+                      @for (pre of prerrequisitosDe(linea.controls.cursoId.value); track pre.id) {
+                        <span class="prerrequisito" [attr.title]="'Requiere haber aprobado ' + pre.nombre">{{ pre.codigo }}</span>
+                      } @empty {
+                        <span class="texto-secundario">{{ linea.controls.cursoId.value ? 'Ninguno' : '—' }}</span>
+                      }
+                    </td>
+                    <td class="col-acciones">
+                      <button type="button" class="boton boton-texto boton-pequeno" (click)="quitarLinea(i)">
+                        <svg lucideX aria-hidden="true"></svg>
+                        <span class="visualmente-oculto">Quitar línea {{ i + 1 }}</span>
+                      </button>
+                    </td>
+                  </tr>
+                  @if (errorLinea(i); as m) {
+                    <tr class="fila-error">
+                      <td colspan="6" class="error-campo">Línea {{ i + 1 }}: {{ m }}</td>
+                    </tr>
+                  }
+                } @empty {
+                  <tr>
+                    <td colspan="6">
+                      <app-estado-vacio titulo="Aún no hay cursos" descripcion="Elige secciones en la oferta o agrega un curso." />
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="2">Total de créditos</td>
+                  <td class="col-num num">{{ totalCreditos() }}</td>
+                  <td colspan="3"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
 
-      <div class="barra-envio acciones">
-        <button
-          type="button"
-          class="boton boton-primario"
-          [disabled]="enviando() || !!existente()"
-          (click)="confirmarYRegistrar()"
-        >
-          {{ enviando() ? 'Registrando…' : 'Revisar y registrar' }}
-        </button>
-        <a class="boton" routerLink="/matricula">Cancelar</a>
-        <span class="texto-secundario resumen-envio">
-          {{ elegidas().length }} curso(s) · {{ totalCreditos() }} créditos
-        </span>
+        <!-- ============ Horario de la seleccion ============ -->
+        @if (bloquesHorario().length) {
+          <section class="tarjeta" aria-labelledby="t-horario">
+            <header><h2 id="t-horario">Horario de la selección</h2></header>
+            <div class="cuerpo tabla-contenedor">
+              <app-horario-semanal [bloques]="bloquesHorario()" titulo="Horario de las secciones elegidas" />
+            </div>
+          </section>
+        }
       </div>
+
+      <!-- ============ Resumen (panel lateral) ============ -->
+      <aside class="panel-lateral" aria-label="Resumen de la inscripción">
+        <section class="tarjeta">
+          <header><h2>Resumen</h2></header>
+          <div class="cuerpo resumen">
+            <dl class="datos">
+              <dt>Alumno</dt>
+              <dd>{{ nombreAlumno() || 'Sin seleccionar' }}</dd>
+              <dt>Periodo</dt>
+              <dd>{{ periodo()?.codigo }}</dd>
+              <dt>Cursos</dt>
+              <dd class="num">{{ elegidas().length }}</dd>
+              <dt>Créditos</dt>
+              <dd class="num total-creditos">{{ totalCreditos() }}</dd>
+            </dl>
+            <div class="campo">
+              <label for="cuotas">Cuotas del cargo</label>
+              <select id="cuotas" formControlName="numeroCuotas">
+                @for (n of cuotas; track n) {
+                  <option [ngValue]="n">{{ n }}</option>
+                }
+              </select>
+              <span class="ayuda">El monto lo calcula Finanzas según los créditos, al registrar.</span>
+            </div>
+          </div>
+        </section>
+
+        @if (cruces().length || prerrequisitosEnLaMisma().length || lineasForm.hasError('repetido') || prerrequisitosPendientes()) {
+          <section class="tarjeta" aria-labelledby="t-validaciones">
+            <header><h2 id="t-validaciones">Validaciones</h2></header>
+            <div class="cuerpo validaciones">
+              @if (lineasForm.hasError('repetido')) {
+                <p class="error-campo">Hay un curso repetido: elige una sola sección por curso.</p>
+              }
+              @for (aviso of prerrequisitosEnLaMisma(); track aviso) {
+                <p class="error-campo">Prerrequisito: {{ aviso }}</p>
+              }
+              @for (cruce of cruces(); track cruce.a + cruce.b) {
+                <p class="error-campo">Cruce de horario: {{ cruce.descripcion }}.</p>
+              }
+              @if (prerrequisitosPendientes() && !prerrequisitosEnLaMisma().length) {
+                <p class="mensaje mensaje-info texto-pequeno">
+                  Los cursos con prerrequisito exigen haberlo aprobado en un periodo anterior; el sistema lo verifica con
+                  el historial al registrar.
+                </p>
+              }
+            </div>
+          </section>
+        }
+
+        @if (error()) {
+          <p class="mensaje mensaje-error" role="alert">
+            <svg lucideCircleAlert aria-hidden="true"></svg><span>{{ error() }}</span>
+          </p>
+        }
+
+        <div class="acciones acciones-envio">
+          <button type="button" class="boton boton-primario" [disabled]="enviando() || !!existente()" (click)="confirmarYRegistrar()">
+            {{ enviando() ? 'Registrando…' : 'Revisar y registrar' }}
+          </button>
+          <a class="boton" routerLink="/matricula">Cancelar</a>
+        </div>
+        @if (bloqueosEnvio().length && !enviando()) {
+          <ul class="pendientes-envio texto-secundario texto-pequeno" aria-label="Pendiente antes de registrar">
+            @for (m of bloqueosEnvio(); track m) {
+              <li>{{ m }}</li>
+            }
+          </ul>
+        }
+      </aside>
     </form>
   }
 </section>

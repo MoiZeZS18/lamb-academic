@@ -96,13 +96,31 @@ export class SeccionList implements OnInit {
     return seccion.limiteVacantes ? Math.round((seccion.cuposOcupados / seccion.limiteVacantes) * 100) : 0;
   }
 
+  /**
+   * Motivo visible por el que no conviene ofrecer la eliminacion (UX). El backend lo vuelve a
+   * validar e incluye un caso que la SPA no ve: detalles de matriculas ya anuladas.
+   */
+  protected motivoNoEliminable(seccion: Seccion): string | null {
+    if (seccion.cuposOcupados > 0) return 'Tiene matriculados: cancélala desde Editar en lugar de eliminarla.';
+    if (this.periodos().find((p) => p.id === seccion.periodoId)?.estado === 'CERRADO') {
+      return 'Pertenece a un periodo cerrado: se conserva su historia.';
+    }
+    return null;
+  }
+
   eliminar(seccion: Seccion): void {
     confirmar(this.dialog, {
-      titulo: 'Eliminar sección',
+      titulo: `Eliminar la sección ${seccion.curso.codigo}-${seccion.grupo}`,
       mensaje:
-        `Se eliminará la sección ${seccion.grupo} de ${seccion.curso.codigo} con sus horarios. ` +
-        'Si ya tiene matrículas, el sistema no lo permitirá y deberás cancelarla.',
-      confirmar: 'Eliminar',
+        'La sección y sus horarios se borrarán de forma definitiva y dejarán de aparecer en la oferta. ' +
+        'Solo es posible si nunca se usó en una matrícula (ni siquiera anulada); si ya se usó, el sistema lo ' +
+        'rechazará y deberás cancelarla.',
+      detalle: [
+        `Curso: ${seccion.curso.codigo} · ${seccion.curso.nombre}`,
+        `Periodo: ${this.codigoPeriodo(seccion.periodoId)}`,
+        `Horario: ${resumenHorario(seccion.horarios) || 'sin horario'}`,
+      ],
+      confirmar: 'Eliminar definitivamente',
       peligro: true,
     }).subscribe((ok) => {
       if (!ok) return;

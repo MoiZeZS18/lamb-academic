@@ -6,7 +6,7 @@
       @if (seccion(); as s) {
         <p class="descripcion">
           {{ s.curso.codigo }} · {{ s.curso.nombre }}, grupo {{ s.grupo }} ·
-          {{ s.cuposOcupados }} matriculados de {{ s.limiteVacantes }}
+          capacidad {{ s.limiteVacantes }} · {{ s.cuposOcupados }} ocupados · {{ s.vacantesDisponibles }} disponibles
         </p>
       }
     </div>
@@ -32,7 +32,7 @@
     </p>
   }
 
-  <form class="tarjeta" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+  <form class="tarjeta formulario-tarjeta" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
     <div class="cuerpo formulario">
       @if (loading() && id() && !seccion()) {
         <p class="estado-carga">Cargando sección…</p>
@@ -99,12 +99,12 @@
           </select>
         </div>
         <div class="campo">
-          <label for="vacantes">Límite de vacantes <span class="obligatorio">*</span></label>
+          <label for="vacantes">Capacidad (límite de vacantes) <span class="obligatorio">*</span></label>
           <input id="vacantes" type="number" min="1" max="200" step="1" formControlName="limiteVacantes" />
           @if (mensajeValidacion('limiteVacantes'); as m) {
             <span class="error-campo">{{ m }}</span>
           } @else if (seccion(); as s) {
-            <span class="ayuda">No puede ser menor que los {{ s.cuposOcupados }} matriculados.</span>
+            <span class="ayuda">No puede ser menor que los {{ s.cuposOcupados }} cupos ya ocupados.</span>
           }
         </div>
       </div>

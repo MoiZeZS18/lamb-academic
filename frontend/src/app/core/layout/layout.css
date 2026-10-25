@@ -36,6 +36,15 @@
   color: #7fd3cf;
 }
 
+.marca-modulo {
+  padding-left: 0.75rem;
+  margin-left: 0.25rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
+  color: #c7d4e3;
+  font-size: 0.875rem;
+  letter-spacing: 0.02em;
+}
+
 .marca-icono {
   width: 24px;
   height: 24px;
@@ -102,9 +111,9 @@
 }
 
 .lateral {
-  width: 240px;
+  width: 248px;
   flex: none;
-  padding: 1rem 0.75rem;
+  padding: 1.25rem 0.75rem;
   background: var(--lamb-blanco);
   border-right: var(--lamb-borde);
   display: flex;
@@ -124,7 +133,7 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--lamb-gris-400);
+  color: var(--lamb-gris-600);
 }
 
 .lateral a {
@@ -141,7 +150,7 @@
 .lateral a svg {
   width: 18px;
   height: 18px;
-  color: var(--lamb-gris-400);
+  color: var(--lamb-gris-600);
 }
 
 .lateral a:hover {
@@ -162,7 +171,15 @@
 .contenido {
   flex: 1;
   min-width: 0;
-  padding: 1.5rem 2rem 3rem;
+  padding: 1.75rem 2.5rem 3rem;
+}
+
+.contenido:focus {
+  outline: none;
+}
+
+.fondo-menu {
+  display: none;
 }
 
 .avisos {
@@ -237,6 +254,18 @@
 
   .lateral.abierto {
     transform: none;
+  }
+
+  .fondo-menu {
+    display: block;
+    position: fixed;
+    inset: 56px 0 0 0;
+    z-index: 14;
+    background: rgba(11, 32, 56, 0.35);
+  }
+
+  .marca-modulo {
+    display: none;
   }
 
   .contenido {

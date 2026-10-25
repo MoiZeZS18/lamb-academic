@@ -17,157 +17,349 @@
   }
 
   @if (loading()) {
-    <p class="estado-carga">Consultando el periodo académico…</p>
+    <p class="estado-carga" aria-busy="true">Consultando el periodo académico y tu matrícula…</p>
   } @else {
-    <div class="rejilla rejilla-2">
-      <article class="tarjeta">
-        <header>
-          <h2>Periodo vigente</h2>
-          @if (periodo(); as p) {
-            <app-etiqueta-estado [estado]="p.estado" />
-          }
-        </header>
-        <div class="cuerpo">
-          @if (periodo(); as p) {
-            <dl class="datos">
-              <dt>Código</dt>
-              <dd>{{ p.codigo }}</dd>
-              <dt>Nombre</dt>
-              <dd>{{ p.nombre }}</dd>
-              <dt>Desde</dt>
-              <dd class="num">{{ p.fechaInicio | date: 'dd/MM/yyyy' }}</dd>
-              <dt>Hasta</dt>
-              <dd class="num">{{ p.fechaFin | date: 'dd/MM/yyyy' }}</dd>
-              @if (seccionesAbiertas() !== null) {
-                <dt>Secciones abiertas</dt>
-                <dd class="num">{{ seccionesAbiertas() }}</dd>
-              }
-            </dl>
+    <!-- ============ Periodo vigente (todos los roles) ============ -->
+    <section class="tarjeta franja-periodo" aria-labelledby="t-periodo">
+      @if (periodo(); as p) {
+        <div class="franja-dato franja-principal">
+          <span class="franja-etiqueta" id="t-periodo">Periodo vigente</span>
+          <span class="franja-valor">{{ p.codigo }}</span>
+          <span class="texto-secundario">{{ p.nombre }}</span>
+        </div>
+        <div class="franja-dato">
+          <span class="franja-etiqueta">Vigencia</span>
+          <span class="num">{{ p.fechaInicio | date: 'dd/MM/yyyy' }} – {{ p.fechaFin | date: 'dd/MM/yyyy' }}</span>
+        </div>
+        <div class="franja-dato">
+          <span class="franja-etiqueta">Estado</span>
+          <app-etiqueta-estado [estado]="p.estado" />
+        </div>
+        <div class="franja-dato franja-inscripcion">
+          <span class="franja-etiqueta">Inscripción</span>
+          @if (bloqueo(); as motivo) {
+            <span class="estado-texto estado-texto-alerta">No disponible</span>
+            <span class="texto-secundario texto-pequeno">{{ motivo }}</span>
           } @else {
-            <div class="estado-vacio">
-              <strong>Sin periodo activo</strong>
-              Ningún periodo está en estado Activo en este momento.
-            </div>
+            <span class="estado-texto estado-texto-ok">Habilitada</span>
+            <span class="texto-secundario texto-pequeno">
+              {{ oferta().abiertas }} secciones abiertas · {{ oferta().vacantesDisponibles }} vacantes disponibles
+            </span>
           }
         </div>
-        <footer>
-          @if (bloqueo(); as motivo) {
-            <p class="mensaje mensaje-alerta">{{ motivo }}</p>
-          } @else {
-            <p class="mensaje mensaje-ok">La inscripción está habilitada para este periodo.</p>
-          }
-        </footer>
-      </article>
+      } @else {
+        <div class="franja-dato franja-principal">
+          <span class="franja-etiqueta" id="t-periodo">Periodo vigente</span>
+          <span class="franja-valor">Sin periodo activo</span>
+          <span class="texto-secundario">{{ bloqueo() }}</span>
+        </div>
+      }
+    </section>
 
-      @if (esEstudiante()) {
-        <article class="tarjeta">
-          <header>
-            <h2>Mi matrícula</h2>
-            @if (matricula(); as m) {
-              <app-etiqueta-estado [estado]="m.estado" />
-            }
-          </header>
-          <div class="cuerpo">
-            @if (matricula(); as m) {
-              <div class="rejilla rejilla-3 indicadores">
-                <div class="indicador">
-                  <span class="valor">{{ m.detalles.length }}</span>
-                  <span class="etiqueta">Cursos</span>
+    <!-- ============ ESTUDIANTE ============ -->
+    @if (esEstudiante() && auth.alumnoId() !== null) {
+      @if (matricula(); as m) {
+        <div class="distribucion-con-panel">
+          <div class="columna-principal">
+            <section class="tarjeta" aria-labelledby="t-mi-matricula">
+              <header>
+                <div>
+                  <h2 id="t-mi-matricula">Mi matrícula {{ periodo()?.codigo }}</h2>
+                  <p class="texto-secundario texto-pequeno">
+                    N.º {{ m.id }} · registrada el {{ m.fecha | date: 'dd/MM/yyyy' }}
+                  </p>
                 </div>
-                <div class="indicador">
-                  <span class="valor">{{ m.totalCreditos ?? '—' }}</span>
-                  <span class="etiqueta">Créditos</span>
-                </div>
-                <div class="indicador">
-                  <span class="valor">{{ m.cargo ? (m.cargo.montoTotal | currency: 'PEN' : 'S/') : '—' }}</span>
-                  <span class="etiqueta">Cargo{{ m.cargo ? ' · ' + m.cargo.numeroCuotas + ' cuotas' : '' }}</span>
-                </div>
+                <app-etiqueta-estado [estado]="m.estado" />
+              </header>
+              <div class="tabla-contenedor">
+                <table class="tabla">
+                  <caption class="visualmente-oculto">Cursos matriculados</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Curso</th>
+                      <th scope="col">Sección</th>
+                      <th scope="col" class="col-secundaria">Docente</th>
+                      <th scope="col">Horario</th>
+                      <th scope="col" class="col-num">Créditos</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (fila of cursosMatriculados(); track fila.detalle.id) {
+                      <tr>
+                        @if (fila.seccion; as s) {
+                          <td>
+                            <span class="celda-principal">{{ s.curso.codigo }}</span>
+                            <div class="texto-secundario texto-pequeno">{{ s.curso.nombre }}</div>
+                          </td>
+                          <td>{{ s.grupo }}</td>
+                          <td class="col-secundaria">{{ s.docenteNombre ?? 'Por asignar' }}</td>
+                          <td class="texto-pequeno">{{ resumenHorario(s.horarios) || 'Sin horario' }}</td>
+                        } @else {
+                          <td>{{ nombreCurso(fila.detalle.cursoId) }}</td>
+                          <td colspan="3" class="texto-secundario">Sección no disponible en la oferta del periodo</td>
+                        }
+                        <td class="col-num num">{{ fila.detalle.creditos ?? '—' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="4">Total de créditos</td>
+                      <td class="col-num num">{{ m.totalCreditos ?? '—' }}</td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
-              <ul class="lista-cursos">
-                @for (d of m.detalles; track d.id) {
-                  <li>
-                    <span>{{ nombreCurso(d.cursoId) }}</span>
-                    <span class="texto-secundario num">{{ d.creditos ?? '—' }} cr.</span>
-                  </li>
-                }
-              </ul>
-            } @else if (periodo()) {
-              <div class="estado-vacio">
-                <strong>Aún no tienes matrícula en {{ periodo()?.codigo }}</strong>
-                Elige tus cursos y secciones en la inscripción.
-              </div>
-            } @else {
-              <div class="estado-vacio">Sin periodo activo no hay matrícula que mostrar.</div>
-            }
-          </div>
-          <footer class="acciones">
-            @if (matricula(); as m) {
-              <a class="boton" [routerLink]="['/matricula/consulta', m.id]">
-                <svg lucideEye aria-hidden="true"></svg>
-                Ver detalle y cargo
-              </a>
-              <a class="boton" routerLink="/matricula/horario" [queryParams]="{ matriculaId: m.id }">
-                <svg lucideCalendarDays aria-hidden="true"></svg>
-                Ver horario
-              </a>
-            } @else {
-              @if (bloqueo()) {
-                <button type="button" class="boton boton-primario" disabled [attr.title]="bloqueo()">
-                  <svg lucideClipboardPen aria-hidden="true"></svg>
-                  Iniciar inscripción
-                </button>
-              } @else {
-                <a class="boton boton-primario" routerLink="/matricula/inscripcion">
-                  <svg lucideClipboardPen aria-hidden="true"></svg>
-                  Iniciar inscripción
+              <footer class="acciones">
+                <a class="boton" [routerLink]="['/matricula/consulta', m.id]">
+                  <svg lucideEye aria-hidden="true"></svg>
+                  Ver detalle de matrícula
                 </a>
-              }
-            }
-          </footer>
-        </article>
-      }
+                <a class="boton" routerLink="/matricula/horario" [queryParams]="{ matriculaId: m.id }">
+                  <svg lucideCalendarDays aria-hidden="true"></svg>
+                  Ver horario completo
+                </a>
+              </footer>
+            </section>
 
-      @if (esCoordinacion()) {
-        <article class="tarjeta">
-          <header>
-            <h2>Matrícula del periodo</h2>
-          </header>
-          <div class="cuerpo">
-            @if (reporte(); as r) {
-              <div class="rejilla rejilla-3 indicadores">
-                <div class="indicador">
-                  <span class="valor">{{ r.totalMatriculas }}</span>
-                  <span class="etiqueta">Matrículas registradas</span>
+            @if (bloquesHorario().length) {
+              <section class="tarjeta" aria-labelledby="t-semana">
+                <header><h2 id="t-semana">Mi semana de clases</h2></header>
+                <div class="cuerpo tabla-contenedor">
+                  <app-horario-semanal [bloques]="bloquesHorario()" titulo="Horario semanal de la matrícula vigente" />
                 </div>
-                <div class="indicador">
-                  <span class="valor">{{ r.totalDetalles }}</span>
-                  <span class="etiqueta">Inscripciones a cursos</span>
-                </div>
+              </section>
+            }
+          </div>
+
+          <aside class="panel-lateral" aria-label="Resumen de la matrícula">
+            <section class="tarjeta">
+              <header><h2>Resumen</h2></header>
+              <div class="cuerpo">
+                <dl class="datos">
+                  <dt>Cursos</dt>
+                  <dd class="num">{{ m.detalles.length }}</dd>
+                  <dt>Créditos</dt>
+                  <dd class="num">{{ m.totalCreditos ?? '—' }}</dd>
+                  <dt>Estado</dt>
+                  <dd><app-etiqueta-estado [estado]="m.estado" /></dd>
+                </dl>
               </div>
-            } @else {
-              <p class="texto-secundario">Sin periodo activo.</p>
+            </section>
+            <section class="tarjeta">
+              <header>
+                <h2>Cargo de matrícula</h2>
+                @if (m.cargo; as c) {
+                  <app-etiqueta-estado [estado]="c.estado" />
+                }
+              </header>
+              <div class="cuerpo">
+                @if (m.cargo; as c) {
+                  <dl class="datos">
+                    <dt>N.º de cargo</dt>
+                    <dd class="num texto-pequeno">{{ c.numeroCargo }}</dd>
+                    <dt>Monto total</dt>
+                    <dd class="num">{{ c.montoTotal | currency: 'PEN' : 'S/' }}</dd>
+                    @if (cargo(); as detalle) {
+                      <dt>Saldo pendiente</dt>
+                      <dd class="num">{{ detalle.saldoPendiente | currency: 'PEN' : 'S/' }}</dd>
+                    }
+                    <dt>Cuotas</dt>
+                    <dd class="num">{{ c.numeroCuotas }}</dd>
+                    @if (proximaCuota(); as q) {
+                      <dt>Próximo vencimiento</dt>
+                      <dd class="num">{{ q.fechaVencimiento | date: 'dd/MM/yyyy' }} · {{ q.montoCuota - q.montoPagado | currency: 'PEN' : 'S/' }}</dd>
+                    }
+                  </dl>
+                } @else {
+                  <p class="texto-secundario">Esta matrícula no tiene un cargo financiero registrado.</p>
+                }
+              </div>
+            </section>
+          </aside>
+        </div>
+      } @else {
+        <section class="tarjeta">
+          <app-estado-vacio
+            [titulo]="periodo() ? 'Aún no tienes matrícula en ' + periodo()!.codigo : 'No hay un periodo activo'"
+            [descripcion]="
+              bloqueo()
+                ? bloqueo()!
+                : 'Elige tus cursos y secciones de la oferta del periodo. El sistema verifica vacantes, cruces de horario y prerrequisitos antes de registrar.'
+            "
+          >
+            @if (periodo() && !bloqueo()) {
+              <a class="boton boton-primario" routerLink="/matricula/inscripcion">
+                <svg lucideClipboardPen aria-hidden="true"></svg>
+                Iniciar inscripción
+              </a>
             }
-          </div>
-          <footer class="acciones">
-            <a class="boton" routerLink="/matricula/consulta">Consultar matrículas</a>
-            <a class="boton" routerLink="/matricula/reportes">Reportes</a>
-            @if (!bloqueo()) {
-              <a class="boton boton-primario" routerLink="/matricula/inscripcion">Registrar matrícula</a>
-            }
-          </footer>
-        </article>
+          </app-estado-vacio>
+        </section>
       }
 
-      @if (!puedeInscribir() && !error()) {
-        <article class="tarjeta">
-          <div class="cuerpo">
-            <p class="texto-secundario">
-              Tu rol puede consultar los periodos y la oferta de secciones. El registro de matrículas corresponde a
-              estudiantes y a la coordinación académica.
-            </p>
+      @if (historial().length) {
+        <section class="tarjeta" aria-labelledby="t-historial">
+          <header><h2 id="t-historial">Historial de matrículas</h2></header>
+          <div class="tabla-contenedor">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th scope="col">Periodo</th>
+                  <th scope="col">N.º</th>
+                  <th scope="col">Fecha</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col" class="col-num">Cursos</th>
+                  <th scope="col" class="col-num">Créditos</th>
+                  <th scope="col" class="col-acciones"><span class="visualmente-oculto">Acciones</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (h of historial(); track h.id) {
+                  <tr>
+                    <td class="celda-principal">{{ codigoPeriodo(h.periodoId) }}</td>
+                    <td class="num">{{ h.id }}</td>
+                    <td class="num">{{ h.fecha | date: 'dd/MM/yyyy' }}</td>
+                    <td><app-etiqueta-estado [estado]="h.estado" /></td>
+                    <td class="col-num">{{ h.detalles.length }}</td>
+                    <td class="col-num">{{ h.totalCreditos ?? '—' }}</td>
+                    <td class="col-acciones">
+                      <a class="boton boton-texto boton-pequeno" [routerLink]="['/matricula/consulta', h.id]">Detalle</a>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
           </div>
-        </article>
+        </section>
       }
-    </div>
+    }
+
+    <!-- ============ COORDINACION / ADMINISTRACION ============ -->
+    @if (esCoordinacion()) {
+      @if (resumen(); as r) {
+        <section class="tarjeta" aria-labelledby="t-indicadores">
+          <header>
+            <h2 id="t-indicadores">Matrícula del periodo {{ periodo()?.codigo }}</h2>
+            <a class="boton boton-texto boton-pequeno" routerLink="/matricula/reportes">Ver reportes</a>
+          </header>
+          <div class="cuerpo indicadores-fila">
+            <div class="indicador">
+              <span class="valor">{{ r.activas }}</span>
+              <span class="etiqueta">Matrículas activas</span>
+            </div>
+            <div class="indicador">
+              <span class="valor">{{ r.anuladas }}</span>
+              <span class="etiqueta">Matrículas anuladas</span>
+            </div>
+            <div class="indicador">
+              <span class="valor">{{ r.cursosActivos }}</span>
+              <span class="etiqueta">Inscripciones a cursos en matrículas activas</span>
+            </div>
+            <div class="indicador">
+              <span class="valor">{{ oferta().abiertas }} / {{ oferta().total }}</span>
+              <span class="etiqueta">Secciones abiertas / programadas</span>
+            </div>
+            <div class="indicador">
+              <span class="valor">{{ oferta().vacantesDisponibles }}</span>
+              <span class="etiqueta">Vacantes disponibles en secciones abiertas</span>
+            </div>
+          </div>
+        </section>
+      }
+
+      <div class="rejilla rejilla-2">
+        <section class="tarjeta" aria-labelledby="t-accesos">
+          <header><h2 id="t-accesos">Gestión de matrícula</h2></header>
+          <nav class="accesos" aria-labelledby="t-accesos">
+            <a routerLink="/matricula/inscripcion" [class.deshabilitado]="!!bloqueo()" [attr.aria-disabled]="!!bloqueo()">
+              <svg lucideClipboardPen aria-hidden="true"></svg>
+              <span>
+                <strong>Registrar matrícula</strong>
+                <span class="texto-secundario texto-pequeno">
+                  {{ bloqueo() ?? 'Inscribir a un alumno en el periodo vigente.' }}
+                </span>
+              </span>
+            </a>
+            <a routerLink="/matricula/consulta">
+              <svg lucideListChecks aria-hidden="true"></svg>
+              <span>
+                <strong>Consultar matrículas</strong>
+                <span class="texto-secundario texto-pequeno">Filtrar por periodo, alumno y estado; anular.</span>
+              </span>
+            </a>
+            <a routerLink="/matricula/secciones">
+              <svg lucideLayers aria-hidden="true"></svg>
+              <span>
+                <strong>Secciones</strong>
+                <span class="texto-secundario texto-pequeno">Programar oferta, docentes, vacantes y horarios.</span>
+              </span>
+            </a>
+            <a routerLink="/matricula/periodos">
+              <svg lucideCalendarRange aria-hidden="true"></svg>
+              <span>
+                <strong>Periodos académicos</strong>
+                <span class="texto-secundario texto-pequeno">
+                  {{ auth.tieneRol(rolAdmin) ? 'Crear, activar y cerrar periodos.' : 'Consultar periodos y sus fechas.' }}
+                </span>
+              </span>
+            </a>
+            <a routerLink="/matricula/reportes">
+              <svg lucideChartColumn aria-hidden="true"></svg>
+              <span>
+                <strong>Reportes</strong>
+                <span class="texto-secundario texto-pequeno">Matrícula, ocupación de vacantes y cargos.</span>
+              </span>
+            </a>
+          </nav>
+        </section>
+
+        <section class="tarjeta" aria-labelledby="t-sin-vacantes">
+          <header><h2 id="t-sin-vacantes">Secciones abiertas sin vacantes</h2></header>
+          @if (oferta().sinVacantes.length) {
+            <div class="tabla-contenedor">
+              <table class="tabla">
+                <thead>
+                  <tr>
+                    <th scope="col">Curso</th>
+                    <th scope="col">Sección</th>
+                    <th scope="col" class="col-num">Ocupados / capacidad</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (s of oferta().sinVacantes; track s.id) {
+                    <tr>
+                      <td>
+                        <span class="celda-principal">{{ s.curso.codigo }}</span>
+                        <span class="texto-secundario"> · {{ s.curso.nombre }}</span>
+                      </td>
+                      <td>{{ s.grupo }}</td>
+                      <td class="col-num num">{{ s.cuposOcupados }} / {{ s.limiteVacantes }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <app-estado-vacio
+              titulo="Todas las secciones abiertas tienen vacantes"
+              [descripcion]="periodo() ? 'Periodo ' + periodo()!.codigo + '.' : 'No hay un periodo activo.'"
+            />
+          }
+        </section>
+      </div>
+    }
+
+    @if (!esEstudiante() && !esCoordinacion() && !error()) {
+      <section class="tarjeta">
+        <app-estado-vacio
+          titulo="Consulta de periodos y oferta"
+          descripcion="Tu rol puede consultar los periodos y las secciones programadas. El registro de matrículas corresponde a los estudiantes y a la coordinación académica."
+        >
+          <a class="boton" routerLink="/matricula/periodos">Periodos</a>
+          <a class="boton" routerLink="/matricula/secciones">Secciones</a>
+        </app-estado-vacio>
+      </section>
+    }
   }
 </section>

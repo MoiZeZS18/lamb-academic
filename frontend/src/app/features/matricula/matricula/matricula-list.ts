@@ -11,7 +11,9 @@ import { ROLES_COORDINACION } from '../../../core/auth/roles';
 import { AvisoService } from '../../../core/services/aviso-service';
 import { mensajeHttp } from '../../../core/services/error-http';
 import { confirmar } from '../../../shared/componentes/confirmar-dialogo';
+import { EstadoVacio } from '../../../shared/componentes/estado-vacio';
 import { EtiquetaEstado } from '../../../shared/componentes/etiqueta-estado';
+import { resumenHorario } from '../../../shared/horario/horario-util';
 import { Alumno, AlumnoService } from '../../base-universal/alumno/alumno-service';
 import { Curso } from '../../core-academico/curso/curso.model';
 import { CursoService } from '../../core-academico/curso/curso-service';
@@ -38,6 +40,7 @@ const ESTADOS_MATRICULA = ['INICIADA', 'CONFIRMADA', 'ANULADA'];
     DatePipe,
     CurrencyPipe,
     EtiquetaEstado,
+    EstadoVacio,
     LucideCalendarDays,
     LucideChevronDown,
     LucideChevronRight,
@@ -69,11 +72,28 @@ export class MatriculaList implements OnInit {
   protected estadoFiltro: string | null = null;
   protected alumnoFiltro: number | null = null;
   protected readonly numero = signal(0);
-  protected readonly tamano = 10;
+  protected tamano = 10;
+  protected readonly tamanos = [10, 20, 50];
+  protected readonly resumenHorario = resumenHorario;
+  /** Coordinacion: texto para acotar la lista de alumnos del filtro. */
+  protected readonly textoAlumno = signal('');
   protected readonly orden = signal<{ campo: string; direccion: 'asc' | 'desc' }>({ campo: 'fecha', direccion: 'desc' });
 
   protected readonly esCoordinacion = computed(() => this.auth.tieneRol(...ROLES_COORDINACION));
-  protected readonly listaAlumnos = computed(() => [...this.alumnos().values()]);
+  protected readonly listaAlumnos = computed(() => {
+    const texto = this.textoAlumno().trim().toLowerCase();
+    const todos = [...this.alumnos().values()].sort((a, b) => a.persona.nombreCompleto.localeCompare(b.persona.nombreCompleto));
+    if (!texto) return todos;
+    return todos.filter(
+      (a) =>
+        a.id === this.alumnoFiltro ||
+        `${a.codigoEstudiante} ${a.persona.nombreCompleto} ${a.persona.numeroDocumento}`.toLowerCase().includes(texto),
+    );
+  });
+
+  protected hayFiltros(): boolean {
+    return !!(this.periodoFiltro || this.estadoFiltro || this.alumnoFiltro);
+  }
 
   ngOnInit(): void {
     forkJoin({
@@ -120,6 +140,14 @@ export class MatriculaList implements OnInit {
     this.cargar();
   }
 
+  limpiarFiltros(): void {
+    this.periodoFiltro = null;
+    this.estadoFiltro = null;
+    this.alumnoFiltro = null;
+    this.textoAlumno.set('');
+    this.filtrar();
+  }
+
   ordenarPor(campo: string): void {
     const actual = this.orden();
     this.orden.set({ campo, direccion: actual.campo === campo && actual.direccion === 'desc' ? 'asc' : 'desc' });
@@ -150,8 +178,8 @@ export class MatriculaList implements OnInit {
     return c ? `${c.codigo} · ${c.nombre}` : `Curso ${id}`;
   }
 
-  protected grupo(seccionId: number): string {
-    return this.secciones().get(seccionId)?.grupo ?? '—';
+  protected seccion(seccionId: number): Seccion | undefined {
+    return this.secciones().get(seccionId);
   }
 
   protected indicadorOrden(campo: string): string {

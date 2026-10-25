@@ -1,11 +1,12 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AvisoService } from '../../../core/services/aviso-service';
 import { mensajeHttp } from '../../../core/services/error-http';
 import { rangoFechas } from '../../../shared/validadores';
-import { ESTADOS_PERIODO, EstadoPeriodo } from './periodo.model';
+import { ESTADOS_PERIODO, EstadoPeriodo, Periodo } from './periodo.model';
 import { PeriodoService } from './periodo-service';
 
 /** Formulario de periodo (S7): crear y editar con el mismo componente. Las reglas del backend mandan. */
@@ -26,6 +27,9 @@ export class PeriodoForm {
   protected readonly error = signal<string | null>(null);
   protected readonly loading = signal(false);
   protected readonly errorCarga = signal(false);
+  /** Estado con el que se cargo el periodo (para avisar si estaba cerrado). */
+  protected readonly estadoOriginal = signal<EstadoPeriodo | null>(null);
+  protected readonly otrosPeriodos = signal<Periodo[]>([]);
 
   protected readonly form = this.fb.nonNullable.group(
     {
@@ -38,7 +42,17 @@ export class PeriodoForm {
     { validators: rangoFechas('fechaInicio', 'fechaFin') },
   );
 
+  /** Otro periodo ACTIVO distinto del que se edita (la inscripcion usa el de inicio mas reciente). */
+  protected readonly otroActivo = computed(() =>
+    this.otrosPeriodos().find((p) => p.estado === 'ACTIVO' && p.id !== this.id()) ?? null,
+  );
+
+  protected readonly estadoElegido = toSignal(this.form.controls.estado.valueChanges, {
+    initialValue: this.form.controls.estado.value,
+  });
+
   constructor() {
+    this.periodoService.listar().subscribe({ next: (data) => this.otrosPeriodos.set(data) });
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       const id = Number(idParam);
@@ -47,6 +61,7 @@ export class PeriodoForm {
       this.periodoService.obtener(id).subscribe({
         next: (periodo) => {
           this.form.patchValue(periodo);
+          this.estadoOriginal.set(periodo.estado);
           this.loading.set(false);
         },
         error: (err: HttpErrorResponse) => {

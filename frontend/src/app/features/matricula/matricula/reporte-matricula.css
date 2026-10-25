@@ -1,0 +1,18 @@
+.indicadores-fila {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.25rem;
+  border-bottom: var(--lamb-borde);
+}
+
+.valor-ok {
+  color: var(--lamb-ok-700) !important;
+}
+
+.valor-alerta {
+  color: var(--lamb-alerta-700) !important;
+}
+
+.valor-neutro {
+  color: var(--lamb-gris-700) !important;
+}
