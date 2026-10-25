@@ -31,6 +31,12 @@ body {
   letter-spacing: 0.02em;
 }
 
+.lamb-marca {
+  color: var(--lamb-marino);
+  text-transform: none;
+  font-size: 1.75rem;
+}
+
 .lamb-marca strong {
   color: var(--lamb-turquesa);
   font-weight: 600;

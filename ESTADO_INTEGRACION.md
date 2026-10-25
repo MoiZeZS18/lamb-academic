@@ -156,6 +156,15 @@ Oracle solo en `127.0.0.1:1522` con imagen fijada; hook de secretos activo; insu
 `D:\LP2`. Corregido el `cargo: null` de las consultas de matrícula. Detalle: `docs/ROTACION_CREDENCIALES.md`
 §0 y `RESULTADOS_PRUEBAS.md` §0. Sin push y sin reescribir el historial.
 
+### Unidad II: frontend de Matrícula y Keycloak (2026-10-24, rama `unidad2/frontend-matricula`)
+
+Keycloak 26.8 con realm propio y PKCE; backend como Resource Server con matriz por rol y filtro por
+dueño (`alumno_id`); `DELETE` de secciones vía `SeccionEnUsoPort`; SPA Angular 22 en `frontend/` con
+portal, inscripción cabecera-detalle, consulta, detalle con cargo, horario, reportes y los CRUD de
+Periodo (S7) y Sección (S8). Pruebas: backend 104/104, frontend 67/67, Keycloak 8/8, matriz 22/22,
+E2E 101/101, huella de Oracle idéntica. Detalle: `docs/lp2-demo-matricula.md` y
+`RESULTADOS_PRUEBAS.md` §U2. Sin push ni fusión con `main`.
+
 ### Cómo reanudar
 
 1. `git switch integracion/backend-unificado`

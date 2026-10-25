@@ -3,6 +3,41 @@
 Rama `integracion/backend-unificado` · Oracle AI Database 26ai Free (`lamb-academic-oracle`,
 esquema `LAMB_APP`) · Java 21.0.12 · Spring Boot 4.0.8.
 
+## U2. Unidad II: frontend de Matrícula y Keycloak (2026-10-24, rama `unidad2/frontend-matricula`)
+
+| Verificación | Comando | Resultado |
+|---|---|---|
+| Backend completo (incluye matriz de seguridad, ABAC y DELETE de secciones) | `cd backend; .\mvnw.cmd clean package` | **104/104** (86 previas + 13 `SecurityConfigTest` + 1 `MatriculaServiceTest` + 4 `SeccionServiceTest`); `ModularityTests` 3/3 |
+| Frontend (Vitest) | `cd frontend; npx ng test --watch=false` | **67/67** en 15 archivos |
+| Compilación de producción | `npx ng build` | correcta; 325 kB iniciales (88 kB comprimidos) |
+| Cliente de Keycloak | `python -I infra/pruebas/verificar_keycloak.py` | **8/8**: password grant `unauthorized_client`; sin `code_challenge` `invalid_request`; login PKCE de los 5 usuarios con rol y `alumno_id`; refresco |
+| Matriz de accesos real | `python -I infra/pruebas/matriz_accesos.py` | **22/22** (401 sin token y con token alterado, 403 por rol y por dueño, 2xx con el rol correcto) |
+| HTTP repetibles con token de Keycloak | `python -I infra/pruebas/e2e_repetible.py` | **101/101**, conteos de las 19 tablas iguales al inicio |
+| Datos de Oracle | `huella_datos.sql` | huella **idéntica** a la del cierre de seguridad, después de todas las pruebas |
+
+Pruebas en el navegador (panel del escritorio, backend y Keycloak reales). El formulario de login de
+Keycloak lo completó `infra/pruebas/completar_login_navegador.py` para no escribir claves en ningún
+registro; el intercambio del código con PKCE lo hizo la SPA.
+
+| Caso | Resultado observado |
+|---|---|
+| Ruta protegida sin sesión | Redirige a Keycloak con `code_challenge_method=S256` y `state`; vuelve al destino pedido |
+| Almacenamiento | `sessionStorage`: solo `lamb_sesion`; `localStorage` vacío |
+| F5 con sesión | La sesión se mantiene |
+| Inscripción (José) | Cruce IS101/IS104 marcado y envío bloqueado; 409 real de prerrequisito (IS201 requiere IS101); registro de IS101+IS102 → matrícula con cargo S/ 550 en 5 cuotas generado por el backend |
+| 403 por dueño | `/matricula/consulta/93` como José → “No tienes acceso a la matricula de otro estudiante” |
+| rolGuard | `/matricula/reportes` como estudiante → `/sin-permiso` |
+| 401 → refresco | Token alterado: 3×401 → **1** refresco → 3×200, sin bucle |
+| Logout | Sesión borrada; la ruta protegida vuelve a pedir login |
+| Anular (coordinación) | Matrícula anulada, cupos liberados, cargo y cuotas anulados |
+| CRUD Sección | Sin curso: mensaje sin petición; autocomplete; 409 de cruce de docente; alta IS202-B; 409 al eliminar IS101-A; baja IS202-B |
+| CRUD Periodo (admin) | Alta 2099-I, edición, 409 al eliminar 2026-II, baja 2099-I |
+| Limpieza | La matrícula de prueba (anulada) se retiró con `limpiar_matricula_prueba.py`, que rechaza matrículas no anuladas (probado con la 93) |
+
+No ejecutado: espera real de 5 minutos para la expiración (se provocó el 401 alterando el token);
+pruebas de navegador automatizadas (Playwright/Cypress no están en el proyecto); login tecleado en
+el formulario de Keycloak por una persona.
+
 ## 0. Cierre de seguridad (2026-10-24, noche)
 
 | Verificación | Resultado |

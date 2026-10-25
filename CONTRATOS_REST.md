@@ -87,4 +87,16 @@ Este documento compara contra el código original de cada aporte (ZIP de los com
 2. Interceptor HTTP único para `ErrorResponse` y `X-Trace-ID`.
 3. Selects con los enumerados: `tipoPersona`, `tipoDocumento`, `EstadoAlumno`, `TipoArchivo`, `DiaSemana`, `EstadoSeccion`, estados de periodo, `ProcesoOrigen` (`TRAMITE`, `OTRO`), `MedioPago`, `ResultadoCurso`.
 4. El `estudianteId` de Matrícula y Finanzas es el **id de ALUMNOS** (no el de PERSONA).
-5. Seguridad JWT (aporte LP2_L) aún no está integrada: se añadirá en U2 y agregará `401/403`.
+5. ~~Seguridad JWT pendiente~~ → **Integrada en U2 con Keycloak** (ver §7).
+
+## 7. Unidad II: seguridad y cambios de contrato
+
+| Cambio | Detalle | Impacto en clientes |
+|---|---|---|
+| Autenticación | Todas las rutas `/api/**` (salvo `/api/v1/hello`) exigen `Authorization: Bearer <token de Keycloak>` | Sin token → **401** con `WWW-Authenticate: Bearer` y el cuerpo `ErrorResponse` |
+| Autorización por rol | Matriz completa en `docs/SEGURIDAD_KEYCLOAK.md` §5 | Rol insuficiente → **403** `"Tu rol no tiene permiso para esta operacion"` |
+| Filtro por dueño (ESTUDIANTE) | `GET /matriculas` se limita a sus matrículas; `GET /matriculas/{id}`, `POST /matriculas`, `GET /finanzas/cargos/{id}`, `/{id}/pagos`, `/estudiante/{id}`, `/estudiante/{id}/saldo` exigen que el recurso sea suyo (claim `alumno_id`) | Recurso ajeno → **403** con el motivo |
+| Nuevo | `DELETE /api/v1/secciones/{id}` → 204 | 404 si no existe; 409 si tiene matrículas (aunque estén anuladas), cupos ocupados o el periodo está cerrado |
+| Nuevo | `GET /api/v1/auth/perfil` → `{sub, usuario, nombre, email, roles, alumnoId}` | Lectura del token, sin base de datos |
+| CORS | Ahora lo aplica Spring Security (preflight sin token); orígenes en `lamb.cors.allowed-origins` | Sin cambio para `http://localhost:4200` |
+| Trazabilidad | `X-Trace-ID` también en las respuestas 401/403 | — |

@@ -43,13 +43,27 @@ Actualizado tras la auditoría técnica final (2026-10-24). Estado: **Resuelto**
 | C2 | Pedir a cada compañero que active el hook en su clon (`git config core.hooksPath .githooks`) y compartirles por canal privado las claves que necesiten | Media |
 | C3 | CORS en navegador real (`fetch` desde `python -m http.server 5500`, S5 3.8) en la demo | Media |
 | C4 | Objetos PL/SQL de BD2 de LP2_G1 (funciones, triggers, procedimientos): no aplicados porque sus scripts traen `DROP TABLE`; extraer solo los objetos y revisar que no dupliquen cálculos del backend | Media |
-| C5 | Seguridad JWT (aporte LP2_L) | U2 (S10) |
+| C5 | ~~Seguridad JWT~~ → Keycloak integrado en U2 (`docs/SEGURIDAD_KEYCLOAK.md`) | Resuelto |
 | C6 | Estado de matrícula como texto libre (contrato original); evaluar enumerado | Baja |
 | C7 | Las pruebas de integración usan el esquema DEV (se autolimpian y verifican conteos) | Baja |
 | C8 | Advertencia interna de springdoc (`JsonSchema type`, Jackson 3): no afecta la documentación generada | Baja |
 | C9 | `ACTIVO NUMBER(1)` con convertidor: si BD2 migra a `BOOLEAN` de 23ai, retirar `BooleanNumeroConverter` | Baja |
 | C10 | Escalamiento con dos instancias (S1 3.3) no probado | Baja |
 | C11 | Adjuntos: se guarda ruta y metadatos, no el archivo | U2 |
+
+## E. Pendientes de la Unidad II
+
+| # | Pendiente | Prioridad |
+|---|---|---|
+| E1 | Evidencias con captura de reloj y usuario (S11 4.3) tomadas por el estudiante: login tecleado por una persona en Keycloak, expiración real (bajar *Access Token Lifespan* a 1 min) | Alta, antes de sustentar |
+| E2 | Revisión por el autor de Core Académico del nuevo `DELETE /api/v1/secciones/{id}` y `SeccionEnUsoPort` | Alta |
+| E3 | Cada compañero: `generar_secretos.py` + levantar Keycloak + `sembrar_usuarios.py` en su equipo (las claves no viajan por Git) | Media |
+| E4 | La guía S7 (PDF) y la plantilla `lp2-demo.md` no estaban en los insumos: se usó la SPA `bomerp-frontend` (S7) y el texto de S12; contrastar con los originales cuando estén disponibles | Media |
+| E5 | Rol DOCENTE no implementado (no hay pantallas de docente en esta unidad) | Baja |
+| E6 | Editar los horarios de una sección ya programada: el contrato del backend no lo permite (solo docente y vacantes) | Baja |
+| E7 | Keycloak en `start-dev` sin TLS ni hostname: solo desarrollo (S10b 9) | Producción |
+| E8 | Interfaces de Finanzas, Base Universal y Core Académico (fuera del alcance de Matrícula) | U3 |
+| E9 | Pruebas de navegador automatizadas (Playwright) | Baja |
 
 ## D. Riesgos conocidos
 
