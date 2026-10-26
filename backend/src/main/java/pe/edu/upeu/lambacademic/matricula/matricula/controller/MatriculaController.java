@@ -68,7 +68,7 @@ public class MatriculaController {
 
         Long propio = IdentidadToken.estudianteRestringido(jwt);
         if (propio != null) {
-            IdentidadToken.exigirPropio(propio, estudianteId == null ? propio : estudianteId, "el contexto académico");
+            IdentidadToken.exigirPropio(propio, estudianteId == null ? propio : estudianteId, "la información académica");
             estudianteId = propio;
         } else if (estudianteId == null) {
             throw new MissingServletRequestParameterException("estudianteId", "Long");

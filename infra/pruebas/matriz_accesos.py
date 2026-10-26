@@ -57,6 +57,11 @@ CASOS = [
     ("Admin crea periodo (pasa el rol; datos invalidos)", "admin.lamb", "POST", "/api/v1/periodos", PERIODO_INVALIDO, 400),
     ("Cajero lista cargos", "cajero", "GET", "/api/v1/finanzas/cargos", None, 200),
     ("Cajero elimina seccion", "cajero", "DELETE", "/api/v1/secciones/1004", None, 403),
+    ("Estudiante consulta SU contexto academico", "ana.quispe", "GET", "/api/v1/matriculas/contexto", None, 200),
+    ("Estudiante consulta contexto AJENO", "ana.quispe", "GET", "/api/v1/matriculas/contexto?estudianteId=1002", None, 403),
+    ("Coordinador consulta contexto de un alumno", "coordinador", "GET", "/api/v1/matriculas/contexto?estudianteId=1033", None, 200),
+    ("Coordinador consulta contexto sin alumno", "coordinador", "GET", "/api/v1/matriculas/contexto", None, 400),
+    ("Cajero consulta contexto academico", "cajero", "GET", "/api/v1/matriculas/contexto?estudianteId=1033", None, 403),
     ("Perfil del token (estudiante)", "jose.apaza", "GET", "/api/v1/auth/perfil", None, 200),
     ("Health publico", None, "GET", "/actuator/health", None, 200),
 ]

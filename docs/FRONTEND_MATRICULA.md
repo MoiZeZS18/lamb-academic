@@ -142,3 +142,16 @@ Cálculo de los indicadores financieros (`indicadoresCargos` en `reporte-matricu
 las reglas de `CargoService` del backend (un cargo ANULADO queda con saldo 0 y no admite pagos). Lo
 pagado es `montoTotal − saldoPendiente` solo de los cargos no anulados; lo anulado nunca se suma a la
 deuda ni a los pagos. No se modificó ningún cálculo del backend.
+
+## 8. Pulido para la presentación (rama `unidad2/pulido-matricula-presentacion`)
+
+| Área | Cambio | Fuente de datos |
+|---|---|---|
+| Registros históricos | `consistencia-matricula.ts` revisa cada matrícula: alumno existente en Base Universal, secciones existentes en la oferta de su periodo, cursos identificados y créditos registrados. Portal y reportes cuentan solo las consistentes y muestran la conciliación con el total del servidor; consulta y detalle marcan las que requieren revisión. Nada se modifica ni se elimina | `/matriculas?periodoId` (paginado), `/alumnos`, `/secciones`, `/matriculas/reporte` |
+| Escuela y plan del alumno | Nuevo `GET /api/v1/matriculas/contexto` (módulo Matrícula, aditivo): escuela y habilitación del alumno; el ESTUDIANTE solo el suyo. La inscripción consulta el plan vigente de esa escuela y los prerrequisitos con `idEscuela` (los mismos que valida el registro) | `/matriculas/contexto`, `/planes-estudio?idEscuela&estado=VIGENTE`, `/cursos/{id}/prerrequisitos?idEscuela` |
+| Inscripción | Ciclo, tipo y prerrequisito de cada curso según el plan; orden y filtro por ciclo; cursos fuera del plan marcados; alumno no habilitado no puede registrar | idem |
+| Estudiante | Menú propio (“Mis matrículas”, “Mi horario”), sin la gestión académica; portal con escuela, plan, ciclo y resultado de cada curso, y lo pagado según las cuotas | `/finanzas/cargos/{id}` (su cargo) |
+| Roles | Periodos y Secciones pasan a ser pantallas de coordinación (ruta + menú); el cajero solo ve el portal | — |
+| Login | Tema `lamb` de Keycloak con la identidad UPeU (ver `docs/SEGURIDAD_KEYCLOAK.md`) | — |
+
+`PlanEstudioService` es de solo lectura: las pantallas de cursos y mallas son de Core Académico.

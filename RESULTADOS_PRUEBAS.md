@@ -3,6 +3,19 @@
 Rama `integracion/backend-unificado` · Oracle AI Database 26ai Free (`lamb-academic-oracle`,
 esquema `LAMB_APP`) · Java 21.0.12 · Spring Boot 4.0.8.
 
+## U2-P. Pulido de Matrícula para la presentación (2026-10-26, rama `unidad2/pulido-matricula-presentacion`)
+
+| Verificación | Resultado |
+|---|---|
+| Frontend `ng test` | 133/133 (25 archivos; 45 pruebas nuevas: consistencia de matrículas, reportes y portal con el caso real de 2026-II, escuela/plan/ciclo y prerrequisitos por escuela, periodo-list, auth-callback, acciones del detalle por rol, 16 rutas por rol) |
+| Frontend `ng build` (producción) | Correcto, sin advertencias |
+| Backend sin Oracle (`mvnw test` excluyendo `MatriculaOracleIntegrationTest`, `MatriculaRollbackOracleIntegrationTest` y `LambAcademicApplicationTests`) | 99/99 en 10 clases (incluye +4 pruebas del endpoint `/matriculas/contexto`). Las 3 clases excluidas usan el Oracle real y no se ejecutaron |
+| `verificar_keycloak.py` | 8/8 con las claves de demostración (login PKCE y roles de las 5 cuentas) |
+| `matriz_accesos.py` | 27/27 (5 casos nuevos de `/matriculas/contexto`) |
+| `e2e_repetible.py` | No ejecutado: escribe en el Oracle real (aunque limpia sus datos), y esta fase exigía no escribir fuera de un entorno aislado |
+| Navegador real | Coordinador: reportes (2 consistentes + 7 en revisión, conciliación 5 = 5), portal, consulta, inscripción con plan y ciclos. Estudiante: menú propio, portal con plan, ciclo, resultado y pagos; 3 rutas de gestión → “Acceso no permitido”. Admin: periodos, secciones, horario. Login UPeU en 1440, 768 y 375 px; clave equivocada y cierre de sesión |
+| Huella de Oracle | Idéntica antes y después de todo el trabajo |
+
 ## U2-M. Mejora integral del frontend de Matrícula (2026-10-25, rama `unidad2/mejora-frontend-matricula`)
 
 Cambios solo en la SPA (detalle en `docs/FRONTEND_MATRICULA.md` §7); backend, Keycloak y Oracle sin cambios.
