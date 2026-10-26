@@ -3,7 +3,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { LucideDynamicIcon, LucideGraduationCap, LucideLogIn, LucideLogOut, LucideMenu, LucideX } from '@lucide/angular';
 import { filter } from 'rxjs';
 import { AuthService } from '../auth/auth-service';
-import { Rol } from '../auth/roles';
+import { ROLES_COORDINACION, Rol } from '../auth/roles';
 import { AvisoService } from '../services/aviso-service';
 import { MENU } from './menu';
 
@@ -41,9 +41,12 @@ export class Layout {
 
   protected readonly menu = computed(() => {
     const roles = this.auth.roles();
+    const soloEstudiante = roles.includes(Rol.ESTUDIANTE) && !ROLES_COORDINACION.some((r) => roles.includes(r));
     return MENU.map((grupo) => ({
       ...grupo,
-      items: grupo.items.filter((item) => !item.roles || item.roles.some((r) => roles.includes(r))),
+      items: grupo.items
+        .filter((item) => !item.roles || item.roles.some((r) => roles.includes(r)))
+        .map((item) => ({ ...item, etiqueta: (soloEstudiante && item.etiquetaEstudiante) || item.etiqueta })),
     })).filter((grupo) => grupo.items.length > 0);
   });
 

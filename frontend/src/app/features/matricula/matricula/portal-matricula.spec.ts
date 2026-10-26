@@ -61,6 +61,30 @@ describe('PortalMatricula (pantalla A por rol)', () => {
     );
   }
 
+  /** Contexto del estudiante (sin estudianteId: lo pone el backend) y plan vigente de su escuela. */
+  function responderPlan() {
+    const ctx = backend.expectOne(`${API}/matriculas/contexto`);
+    expect(ctx.request.params.has('estudianteId')).toBe(false);
+    ctx.flush({ estudianteId: 1001, existe: true, habilitado: true, escuelaId: 1 });
+    backend.expectOne((r) => r.url === `${API}/planes-estudio` && r.params.get('idEscuela') === '1').flush([
+      {
+        id: 1,
+        idEscuela: 1,
+        escuelaNombre: 'Escuela Profesional de Ingenieria de Sistemas',
+        codigo: 'PLAN-EPIS-2026',
+        nombre: 'Plan EPIS 2026',
+        anio: 2026,
+        version: 1,
+        estado: 'VIGENTE',
+        totalCreditos: 4,
+        totalCursos: 1,
+        detalles: [
+          { id: 1, idCurso: 1001, cursoCodigo: 'IS101', cursoNombre: 'Curso IS101', ciclo: 3, creditos: 4, tipo: 'OBLIGATORIO', idPrerrequisito: null, prerrequisitoCodigo: null },
+        ],
+      },
+    ]);
+  }
+
   beforeEach(() => {
     cerrarSesionDePrueba();
     TestBed.resetTestingModule();
@@ -77,6 +101,7 @@ describe('PortalMatricula (pantalla A por rol)', () => {
     backend.expectOne((r) => r.url === `${API}/secciones`).flush([seccionDePrueba(1001, 'IS101')]);
     backend.expectOne((r) => r.url === `${API}/cursos`).flush([]);
     backend.expectOne(`${API}/finanzas/cargos/9`).flush(CARGO);
+    responderPlan();
     await fixture.whenStable();
 
     const contenido = texto(fixture);
@@ -87,6 +112,11 @@ describe('PortalMatricula (pantalla A por rol)', () => {
     // Proxima cuota: lo que falta de la primera cuota no pagada del todo (350 - 200).
     expect(contenido).toMatch(/10\/11\/2026 · S\/\s?150\.00/);
     expect(botonInscripcion(fixture)).toBeUndefined();
+    // Ubicacion en su plan, resultado academico y lo pagado (suma de cuotas: 200 + 0).
+    expect(contenido).toContain('Ciclo 3 de tu plan');
+    expect(contenido).toContain('PLAN-EPIS-2026');
+    expect(contenido).toContain('En curso');
+    expect(contenido).toMatch(/Pagado\s?S\/\s?200\.00/);
     // El estudiante no consulta los reportes del periodo (ni siquiera los pide).
     backend.expectNone((r) => r.url.includes('/reporte'));
   });
@@ -97,6 +127,7 @@ describe('PortalMatricula (pantalla A por rol)', () => {
     backend.expectOne((r) => r.url === `${API}/matriculas`).flush(pagina([]));
     backend.expectOne((r) => r.url === `${API}/secciones`).flush([seccionDePrueba(1001, 'IS101')]);
     backend.expectOne((r) => r.url === `${API}/cursos`).flush([]);
+    responderPlan();
     await fixture.whenStable();
 
     expect(texto(fixture)).toContain('Aún no tienes matrícula en 2026-II');
@@ -108,6 +139,7 @@ describe('PortalMatricula (pantalla A por rol)', () => {
     backend.expectOne(`${API}/periodos`).flush([{ ...PERIODO_ACTIVO, estado: 'CERRADO' }]);
     backend.expectOne((r) => r.url === `${API}/matriculas`).flush(pagina([]));
     backend.expectOne((r) => r.url === `${API}/cursos`).flush([]);
+    responderPlan();
     await fixture.whenStable();
 
     expect(texto(fixture)).toContain('No hay un periodo activo');

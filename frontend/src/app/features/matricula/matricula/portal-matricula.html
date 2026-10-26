@@ -81,6 +81,7 @@
                       <th scope="col" class="col-secundaria">Docente</th>
                       <th scope="col">Horario</th>
                       <th scope="col" class="col-num">Créditos</th>
+                      <th scope="col">Resultado</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -90,6 +91,9 @@
                           <td>
                             <span class="celda-principal">{{ s.curso.codigo }}</span>
                             <div class="texto-secundario texto-pequeno">{{ s.curso.nombre }}</div>
+                            @if (planPorCurso().get(s.curso.id); as d) {
+                              <div class="texto-pequeno ubicacion-plan">Ciclo {{ d.ciclo }} de tu plan</div>
+                            }
                           </td>
                           <td>{{ s.grupo }}</td>
                           <td class="col-secundaria">{{ s.docenteNombre ?? 'Por asignar' }}</td>
@@ -99,13 +103,21 @@
                           <td colspan="3" class="texto-secundario">Sección no disponible en la oferta del periodo</td>
                         }
                         <td class="col-num num">{{ fila.detalle.creditos ?? '—' }}</td>
+                        <td>
+                          @if (fila.detalle.resultado) {
+                            <app-etiqueta-estado [estado]="fila.detalle.resultado" />
+                          } @else {
+                            <span class="texto-secundario">En curso</span>
+                          }
+                        </td>
                       </tr>
                     }
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colspan="4">Total de créditos</td>
+                      <td colspan="4">Total de créditos matriculados</td>
                       <td class="col-num num">{{ m.totalCreditos ?? '—' }}</td>
+                      <td></td>
                     </tr>
                   </tfoot>
                 </table>
@@ -143,6 +155,12 @@
                   <dd class="num">{{ m.totalCreditos ?? '—' }}</dd>
                   <dt>Estado</dt>
                   <dd><app-etiqueta-estado [estado]="m.estado" /></dd>
+                  @if (plan(); as pl) {
+                    <dt>Escuela</dt>
+                    <dd>{{ pl.escuelaNombre }}</dd>
+                    <dt>Plan de estudios</dt>
+                    <dd>{{ pl.codigo }}</dd>
+                  }
                 </dl>
               </div>
             </section>
@@ -161,6 +179,8 @@
                     <dt>Monto total</dt>
                     <dd class="num">{{ c.montoTotal | currency: 'PEN' : 'S/' }}</dd>
                     @if (cargo(); as detalle) {
+                      <dt>Pagado</dt>
+                      <dd class="num">{{ pagado() | currency: 'PEN' : 'S/' }}</dd>
                       <dt>Saldo pendiente</dt>
                       <dd class="num">{{ detalle.saldoPendiente | currency: 'PEN' : 'S/' }}</dd>
                     }
@@ -171,6 +191,10 @@
                       <dd class="num">{{ q.fechaVencimiento | date: 'dd/MM/yyyy' }} · {{ q.montoCuota - q.montoPagado | currency: 'PEN' : 'S/' }}</dd>
                     }
                   </dl>
+                  <p class="texto-secundario texto-pequeno nota-finanzas">
+                    Los pagos se registran en caja (Finanzas); aquí solo se consultan. El detalle de cuotas está en la
+                    matrícula.
+                  </p>
                 } @else {
                   <p class="texto-secundario">Esta matrícula no tiene un cargo financiero registrado.</p>
                 }

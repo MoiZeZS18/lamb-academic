@@ -56,7 +56,8 @@ export const routes: Routes = [
       },
       {
         path: 'matricula/periodos',
-        canActivate: [authGuard],
+        // Pantallas de gestion: el estudiante ve la oferta en Inscripcion y su periodo en el portal.
+        canActivate: [authGuard, rolGuard(...ROLES_COORDINACION)],
         loadComponent: () => import('./features/matricula/periodo/periodo-list').then((m) => m.PeriodoList),
       },
       {
@@ -71,7 +72,8 @@ export const routes: Routes = [
       },
       {
         path: 'matricula/secciones',
-        canActivate: [authGuard],
+        // Pantallas de gestion: el estudiante ve la oferta en Inscripcion y su periodo en el portal.
+        canActivate: [authGuard, rolGuard(...ROLES_COORDINACION)],
         loadComponent: () => import('./features/matricula/seccion/seccion-list').then((m) => m.SeccionList),
       },
       {

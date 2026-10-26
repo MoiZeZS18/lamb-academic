@@ -12,7 +12,7 @@ import {
   LucideLayers,
   LucideListChecks,
 } from '@lucide/angular';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin, of, switchMap } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth-service';
 import { ROLES_COORDINACION, Rol } from '../../../core/auth/roles';
 import { mensajeHttp } from '../../../core/services/error-http';
@@ -20,9 +20,11 @@ import { EstadoVacio } from '../../../shared/componentes/estado-vacio';
 import { EtiquetaEstado } from '../../../shared/componentes/etiqueta-estado';
 import { BloqueSemanal, HorarioSemanal } from '../../../shared/horario/horario-semanal';
 import { resumenHorario } from '../../../shared/horario/horario-util';
+import { Alumno, AlumnoService } from '../../base-universal/alumno/alumno-service';
 import { Curso } from '../../core-academico/curso/curso.model';
 import { CursoService } from '../../core-academico/curso/curso-service';
-import { Alumno, AlumnoService } from '../../base-universal/alumno/alumno-service';
+import { DetallePlan, PlanEstudio } from '../../core-academico/plan/plan-estudio.model';
+import { PlanEstudioService } from '../../core-academico/plan/plan-estudio-service';
 import { Cargo, CargoService } from '../../finanzas/cargo/cargo-service';
 import { Periodo } from '../periodo/periodo.model';
 import { PeriodoService } from '../periodo/periodo-service';
@@ -78,6 +80,7 @@ export class PortalMatricula implements OnInit {
   private readonly cursoService = inject(CursoService);
   private readonly cargoService = inject(CargoService);
   private readonly alumnoService = inject(AlumnoService);
+  private readonly planService = inject(PlanEstudioService);
   protected readonly auth = inject(AuthService);
 
   protected readonly resumenHorario = resumenHorario;
@@ -90,6 +93,8 @@ export class PortalMatricula implements OnInit {
   protected readonly secciones = signal<Seccion[]>([]);
   protected readonly cursos = signal<Map<number, Curso>>(new Map());
   protected readonly resumen = signal<ResumenPeriodo | null>(null);
+  /** Plan vigente de la escuela del estudiante (para ubicar sus cursos por ciclo). */
+  protected readonly plan = signal<PlanEstudio | null>(null);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
 
@@ -129,6 +134,15 @@ export class PortalMatricula implements OnInit {
         subtitulo: `Aula ${h.aula}`,
       })),
     ),
+  );
+
+  protected readonly planPorCurso = computed(
+    () => new Map((this.plan()?.detalles ?? []).map((d): [number, DetallePlan] => [d.idCurso, d])),
+  );
+
+  /** Lo realmente pagado: suma de lo pagado en cada cuota (Finanzas). */
+  protected readonly pagado = computed(() =>
+    (this.cargo()?.cuotas ?? []).reduce((total, cuota) => total + cuota.montoPagado, 0),
   );
 
   /** Oferta del periodo calculada sobre las secciones reales devueltas por la API. */
@@ -195,12 +209,28 @@ export class PortalMatricula implements OnInit {
           });
         }
         this.cargarCargo();
+        if (estudiante) this.cargarPlan();
       },
       error: (err: HttpErrorResponse) => {
         this.error.set(mensajeHttp(err, 'No se pudo consultar la información de matrícula.'));
         this.loading.set(false);
       },
     });
+  }
+
+  /** Escuela del estudiante (su contexto) y el plan vigente de esa escuela; informativo. */
+  private cargarPlan(): void {
+    this.matriculaService
+      .contexto()
+      .pipe(
+        switchMap((contexto) =>
+          contexto.escuelaId ? this.planService.buscar(contexto.escuelaId, 'VIGENTE') : of([] as PlanEstudio[]),
+        ),
+      )
+      .subscribe({
+        next: (planes) => this.plan.set(planes[0] ?? null),
+        error: () => this.plan.set(null),
+      });
   }
 
   /** El cargo con su saldo real lo consulta Finanzas (el estudiante solo puede ver el suyo). */

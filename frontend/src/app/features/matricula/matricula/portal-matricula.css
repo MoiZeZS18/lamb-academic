@@ -105,3 +105,12 @@
   border-top: var(--lamb-borde);
   color: var(--lamb-alerta-700);
 }
+
+.ubicacion-plan {
+  color: var(--lamb-turquesa-600);
+  font-weight: 500;
+}
+
+.nota-finanzas {
+  margin: 0.75rem 0 0;
+}

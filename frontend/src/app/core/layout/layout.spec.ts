@@ -26,19 +26,27 @@ describe('Layout: menu por rol (S11 2.7)', () => {
     expect(html.textContent).toContain('Iniciar sesión');
   });
 
-  it('ESTUDIANTE: inscripcion y horario, sin Reportes', async () => {
+  it('ESTUDIANTE: solo su informacion, sin la gestion academica', async () => {
     iniciarSesionDePrueba(['ESTUDIANTE'], 1001);
     const enlaces = await enlacesDelMenu();
-    expect(enlaces).toEqual(['Portal de matrícula', 'Inscripción', 'Matrículas', 'Horario', 'Periodos', 'Secciones']);
+    expect(enlaces).toEqual(['Portal de matrícula', 'Inscripción', 'Mis matrículas', 'Mi horario']);
   });
 
-  it('COORDINADOR: agrega Reportes', async () => {
+  it('COORDINADOR: gestion academica completa con Reportes', async () => {
     iniciarSesionDePrueba(['COORDINADOR']);
-    expect(await enlacesDelMenu()).toContain('Reportes');
+    expect(await enlacesDelMenu()).toEqual([
+      'Portal de matrícula',
+      'Inscripción',
+      'Matrículas',
+      'Horario',
+      'Periodos',
+      'Secciones',
+      'Reportes',
+    ]);
   });
 
-  it('CAJERO: solo consulta (sin inscripcion ni reportes)', async () => {
+  it('CAJERO: solo el portal (su trabajo esta en Finanzas)', async () => {
     iniciarSesionDePrueba(['CAJERO']);
-    expect(await enlacesDelMenu()).toEqual(['Portal de matrícula', 'Periodos', 'Secciones']);
+    expect(await enlacesDelMenu()).toEqual(['Portal de matrícula']);
   });
 });
