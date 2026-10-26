@@ -32,47 +32,124 @@
   } @else if (porEstado().length) {
     <!-- ============ Matricula ============ -->
     <section class="tarjeta" aria-labelledby="t-matricula">
-      <header><h2 id="t-matricula">Matrícula</h2></header>
+      <header>
+        <div>
+          <h2 id="t-matricula">Matrícula</h2>
+          <p class="texto-secundario texto-pequeno">
+            Cada matrícula se revisa contra Base Universal (alumno) y la oferta del periodo (secciones). Solo las
+            consistentes se cuentan como matrículas activas; las demás se listan abajo para su revisión.
+          </p>
+        </div>
+      </header>
       <div class="cuerpo indicadores-fila">
         <div class="indicador">
-          <span class="valor">{{ matriculas().activas }}</span>
-          <span class="etiqueta">Matrículas activas (iniciadas y confirmadas)</span>
+          <span class="valor">{{ matriculas().consistentes }}</span>
+          <span class="etiqueta">Matrículas activas consistentes</span>
         </div>
         <div class="indicador">
-          <span class="valor">{{ matriculas().anuladas }}</span>
-          <span class="etiqueta">Matrículas anuladas</span>
-        </div>
-        <div class="indicador">
-          <span class="valor">{{ matriculas().cursosActivos }}</span>
-          <span class="etiqueta">Inscripciones a cursos en matrículas activas</span>
+          <span class="valor">{{ matriculas().cursosConsistentes }}</span>
+          <span class="etiqueta">Inscripciones a cursos (consistentes)</span>
         </div>
         <div class="indicador">
           <span class="valor">{{ matriculas().cursosPorMatricula | number: '1.1-1' }}</span>
-          <span class="etiqueta">Cursos por matrícula activa</span>
+          <span class="etiqueta">Cursos por matrícula consistente</span>
+        </div>
+        <div class="indicador">
+          <span class="valor" [class.valor-alerta]="matriculas().revision > 0">{{ matriculas().revision }}</span>
+          <span class="etiqueta">Requieren revisión (registros históricos)</span>
+        </div>
+        <div class="indicador">
+          <span class="valor valor-neutro">{{ matriculas().anuladas }}</span>
+          <span class="etiqueta">Matrículas anuladas</span>
         </div>
       </div>
+      <p class="cuerpo texto-pequeno texto-secundario conciliacion">
+        Total registrado en el servidor: {{ matriculas().registradas }} matrículas activas con
+        {{ matriculas().inscripcionesRegistradas }} inscripciones = {{ matriculas().consistentes }} consistentes
+        ({{ matriculas().cursosConsistentes }} inscripciones) + {{ matriculas().revision }} en revisión
+        ({{ matriculas().inscripcionesRevision }} inscripciones).
+      </p>
+      @if (!matriculas().cuadra) {
+        <p class="mensaje mensaje-alerta" role="status">
+          La revisión individual no coincide con el total del servidor. Vuelve a generar el reporte.
+        </p>
+      }
       <div class="tabla-contenedor">
         <table class="tabla">
           <caption class="visualmente-oculto">Matrículas por estado</caption>
           <thead>
             <tr>
               <th scope="col">Estado</th>
-              <th scope="col" class="col-num">Matrículas</th>
-              <th scope="col" class="col-num">Inscripciones a cursos</th>
+              <th scope="col" class="col-num">Registradas</th>
+              <th scope="col" class="col-num">Consistentes</th>
+              <th scope="col" class="col-num">En revisión</th>
+              <th scope="col" class="col-num">Inscripciones consistentes</th>
             </tr>
           </thead>
           <tbody>
             @for (fila of porEstado(); track fila.estado) {
-              <tr>
+              @let d = porEstadoDetalle(fila.estado);
+              <tr [class.anulada]="fila.estado === 'ANULADA'">
                 <td><app-etiqueta-estado [estado]="fila.estado" /></td>
                 <td class="col-num num">{{ fila.reporte.totalMatriculas }}</td>
-                <td class="col-num num">{{ fila.reporte.totalDetalles }}</td>
+                @if (fila.estado === 'ANULADA') {
+                  <td class="col-num" colspan="3"><span class="texto-secundario">No aplica: no son matrículas activas</span></td>
+                } @else {
+                  <td class="col-num num">{{ d.consistentes }}</td>
+                  <td class="col-num num">{{ d.revision }}</td>
+                  <td class="col-num num">{{ d.inscripciones }}</td>
+                }
               </tr>
             }
           </tbody>
         </table>
       </div>
     </section>
+
+    @if (clasificacion()?.revision?.length) {
+      <section class="tarjeta" aria-labelledby="t-revision">
+        <header>
+          <div>
+            <h2 id="t-revision">Registros que requieren revisión</h2>
+            <p class="texto-secundario texto-pequeno">
+              Matrículas registradas antes de la integración de módulos. Se conservan sin cambios; su corrección
+              corresponde a la administración de datos académicos.
+            </p>
+          </div>
+        </header>
+        <div class="tabla-contenedor">
+          <table class="tabla">
+            <caption class="visualmente-oculto">Matrículas que requieren revisión</caption>
+            <thead>
+              <tr>
+                <th scope="col">Matrícula</th>
+                <th scope="col">Alumno</th>
+                <th scope="col">Estado</th>
+                <th scope="col" class="col-num">Cursos</th>
+                <th scope="col">Motivos</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of clasificacion()!.revision; track r.matricula.id) {
+                <tr>
+                  <td><a [routerLink]="['/matricula/consulta', r.matricula.id]">N.º {{ r.matricula.id }}</a></td>
+                  <td class="num">{{ r.matricula.estudianteId }}</td>
+                  <td><app-etiqueta-estado [estado]="r.matricula.estado" /></td>
+                  <td class="col-num num">{{ r.matricula.detalles.length }}</td>
+                  <td>
+                    <ul class="lista-motivos">
+                      @for (m of r.motivos; track m) {
+                        <li>{{ m }}</li>
+                      }
+                    </ul>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
 
     <!-- ============ Cargos ============ -->
     <section class="tarjeta" aria-labelledby="t-cargos">
@@ -161,6 +238,12 @@
           <p class="texto-secundario texto-pequeno">
             Capacidad total: suma del límite de vacantes de las secciones no canceladas. Disponibles = capacidad − ocupados.
           </p>
+          @if (clasificacion(); as c) {
+            <p class="texto-pequeno conciliacion" [class.texto-error]="c.inscripcionesConsistentes !== totalesOcupacion().ocupados">
+              Conciliación: {{ totalesOcupacion().ocupados }} cupos ocupados frente a {{ c.inscripcionesConsistentes }}
+              inscripciones consistentes{{ c.inscripcionesConsistentes === totalesOcupacion().ocupados ? ': coinciden.' : ': no coinciden, revisar.' }}
+            </p>
+          }
         </div>
       </header>
       <div class="tabla-contenedor">

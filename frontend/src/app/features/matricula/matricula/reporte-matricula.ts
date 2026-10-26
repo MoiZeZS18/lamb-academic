@@ -2,18 +2,21 @@ import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { LucidePrinter } from '@lucide/angular';
 import { forkJoin } from 'rxjs';
 import { mensajeHttp } from '../../../core/services/error-http';
 import { EstadoVacio } from '../../../shared/componentes/estado-vacio';
 import { EtiquetaEstado } from '../../../shared/componentes/etiqueta-estado';
+import { AlumnoService } from '../../base-universal/alumno/alumno-service';
 import { CargoEstadoReporte, CargoService } from '../../finanzas/cargo/cargo-service';
 import { Periodo } from '../periodo/periodo.model';
 import { PeriodoService } from '../periodo/periodo-service';
-import { SeccionOcupacion } from '../seccion/seccion.model';
+import { Seccion, SeccionOcupacion } from '../seccion/seccion.model';
 import { SeccionService } from '../seccion/seccion-service';
+import { ClasificacionPeriodo, clasificarMatriculas } from './consistencia-matricula';
 import { periodoActivo } from './contexto-matricula';
-import { ESTADO_ANULADA, MatriculaReporte } from './matricula.model';
+import { ESTADO_ANULADA, Matricula, MatriculaReporte } from './matricula.model';
 import { MatriculaService } from './matricula-service';
 
 /** Estados registrados en Oracle (PENDIENTES C6). INICIADA y CONFIRMADA son matriculas activas. */
@@ -49,7 +52,7 @@ export function indicadoresCargos(cargos: CargoEstadoReporte[]) {
  */
 @Component({
   selector: 'app-reporte-matricula',
-  imports: [FormsModule, CurrencyPipe, DecimalPipe, EtiquetaEstado, EstadoVacio, LucidePrinter],
+  imports: [FormsModule, RouterLink, CurrencyPipe, DecimalPipe, EtiquetaEstado, EstadoVacio, LucidePrinter],
   templateUrl: './reporte-matricula.html',
   styleUrl: './reporte-matricula.css',
 })
@@ -58,31 +61,55 @@ export class ReporteMatricula implements OnInit {
   private readonly matriculaService = inject(MatriculaService);
   private readonly seccionService = inject(SeccionService);
   private readonly cargoService = inject(CargoService);
+  private readonly alumnoService = inject(AlumnoService);
 
   protected readonly periodos = signal<Periodo[]>([]);
   protected readonly porEstado = signal<{ estado: string; reporte: MatriculaReporte }[]>([]);
   protected readonly ocupacion = signal<SeccionOcupacion[]>([]);
   protected readonly cargos = signal<CargoEstadoReporte[]>([]);
+  /** Matriculas del periodo revisadas una por una contra Base Universal y Core Academico. */
+  protected readonly clasificacion = signal<ClasificacionPeriodo | null>(null);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected periodoFiltro: number | null = null;
 
+  /**
+   * Totales registrados (agregado del servidor) frente a los consistentes (revision de cada
+   * registro). Los indicadores principales usan los consistentes; el total registrado se muestra
+   * siempre para conservar la trazabilidad.
+   */
   protected readonly matriculas = computed(() => {
     const filas = this.porEstado();
-    const de = (activas: boolean) => filas.filter((f) => (f.estado === ESTADO_ANULADA) !== activas);
     const sumar = (lista: typeof filas, campo: keyof MatriculaReporte) =>
       lista.reduce((t, f) => t + f.reporte[campo], 0);
-    const activas = de(true);
-    const anuladas = de(false);
-    const cantidadActivas = sumar(activas, 'totalMatriculas');
-    const cursosActivos = sumar(activas, 'totalDetalles');
+    const activasServidor = filas.filter((f) => f.estado !== ESTADO_ANULADA);
+    const c = this.clasificacion();
+    const consistentes = c?.consistentes.length ?? 0;
+    const cursos = c?.inscripcionesConsistentes ?? 0;
     return {
-      activas: cantidadActivas,
-      anuladas: sumar(anuladas, 'totalMatriculas'),
-      cursosActivos,
-      cursosPorMatricula: cantidadActivas ? cursosActivos / cantidadActivas : 0,
+      registradas: sumar(activasServidor, 'totalMatriculas'),
+      inscripcionesRegistradas: sumar(activasServidor, 'totalDetalles'),
+      consistentes,
+      revision: c?.revision.length ?? 0,
+      inscripcionesRevision: c?.inscripcionesRevision ?? 0,
+      anuladas: sumar(filas.filter((f) => f.estado === ESTADO_ANULADA), 'totalMatriculas'),
+      cursosConsistentes: cursos,
+      cursosPorMatricula: consistentes ? cursos / consistentes : 0,
+      // La revision recorre las mismas filas que el agregado: si no cuadran, se avisa.
+      cuadra: !c || c.registradas.length === sumar(activasServidor, 'totalMatriculas'),
     };
   });
+
+  /** Consistentes y en revision por estado, para la tabla. */
+  protected porEstadoDetalle(estado: string) {
+    const c = this.clasificacion();
+    const deEstado = (lista: Matricula[]) => lista.filter((m) => m.estado === estado);
+    return {
+      consistentes: c ? deEstado(c.consistentes).length : 0,
+      revision: c ? c.revision.filter((r) => r.matricula.estado === estado).length : 0,
+      inscripciones: c ? deEstado(c.consistentes).reduce((t, m) => t + m.detalles.length, 0) : 0,
+    };
+  }
 
   protected readonly finanzas = computed(() => indicadoresCargos(this.cargos()));
 
@@ -113,11 +140,20 @@ export class ReporteMatricula implements OnInit {
       estados: forkJoin(ESTADOS.map((estado) => this.matriculaService.reporte({ periodoId, estado }))),
       ocupacion: this.seccionService.ocupacion(periodoId),
       cargos: this.cargoService.resumen(periodoId),
+      registros: this.matriculaService.buscarTodas({ periodoId }),
+      alumnos: this.alumnoService.listar(),
+      secciones: this.seccionService.listar({ periodoId }),
     }).subscribe({
-      next: ({ estados, ocupacion, cargos }) => {
+      next: ({ estados, ocupacion, cargos, registros, alumnos, secciones }) => {
         this.porEstado.set(ESTADOS.map((estado, i) => ({ estado, reporte: estados[i] })));
         this.ocupacion.set(ocupacion);
         this.cargos.set(cargos);
+        this.clasificacion.set(
+          clasificarMatriculas(registros, {
+            alumnos: new Set(alumnos.map((a) => a.id)),
+            secciones: new Map(secciones.map((s): [number, Seccion] => [s.id, s])),
+          }),
+        );
         this.loading.set(false);
       },
       error: (err: HttpErrorResponse) => {

@@ -99,3 +99,9 @@
   pointer-events: none;
   opacity: 0.6;
 }
+
+.mensaje-revision {
+  margin: 0;
+  border-top: var(--lamb-borde);
+  color: var(--lamb-alerta-700);
+}

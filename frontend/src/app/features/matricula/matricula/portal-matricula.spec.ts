@@ -2,7 +2,17 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { API, PERIODO_ACTIVO, matriculaDePrueba, pagina, seccionDePrueba } from '../../../../testing/datos-matricula';
+import {
+  ALUMNOS_IDS,
+  API,
+  MATRICULAS_2026_II,
+  PERIODO_ACTIVO,
+  SECCIONES_2026_II,
+  alumnosDePrueba,
+  matriculaDePrueba,
+  pagina,
+  seccionDePrueba,
+} from '../../../../testing/datos-matricula';
 import { cerrarSesionDePrueba, iniciarSesionDePrueba } from '../../../../testing/sesion-prueba';
 import { PortalMatricula } from './portal-matricula';
 
@@ -104,32 +114,33 @@ describe('PortalMatricula (pantalla A por rol)', () => {
     expect(botonInscripcion(fixture)).toBeUndefined();
   });
 
-  it('la COORDINACION ve indicadores reales: activas y anuladas por separado', async () => {
+  it('la COORDINACION ve indicadores consistentes y la trazabilidad con lo registrado', async () => {
     const fixture = await crear(['COORDINADOR']);
     backend.expectOne(`${API}/periodos`).flush([PERIODO_ACTIVO]);
     backend
       .expectOne((r) => r.url === `${API}/secciones`)
       .flush([
-        seccionDePrueba(1001, 'IS101'),
-        seccionDePrueba(1003, 'IS103', { limiteVacantes: 2, cuposOcupados: 2, vacantesDisponibles: 0 }),
+        ...SECCIONES_2026_II,
+        seccionDePrueba(1006, 'IS103', { limiteVacantes: 2, cuposOcupados: 2, vacantesDisponibles: 0 }),
       ]);
-    const reporte = (estado: string) =>
-      backend.expectOne((r) => r.url === `${API}/matriculas/reporte` && r.params.get('estado') === estado);
-    reporte('INICIADA').flush({ totalMatriculas: 9, totalDetalles: 14 });
-    reporte('CONFIRMADA').flush({ totalMatriculas: 1, totalDetalles: 2 });
-    reporte('ANULADA').flush({ totalMatriculas: 3, totalDetalles: 5 });
+    backend
+      .expectOne((r) => r.url === `${API}/matriculas` && r.params.get('periodoId') === '4')
+      .flush(pagina(MATRICULAS_2026_II));
+    backend.expectOne(`${API}/alumnos`).flush(alumnosDePrueba(ALUMNOS_IDS));
     await fixture.whenStable();
 
     const indicadores = [...(fixture.nativeElement as HTMLElement).querySelectorAll('.indicador')].map((i) =>
       [...i.children].map((parte) => parte.textContent!.trim()).join(' '),
     );
-    expect(indicadores).toContain('10 Matrículas activas');
-    expect(indicadores).toContain('3 Matrículas anuladas');
-    // Las inscripciones de matriculas anuladas (5) no se suman a las activas.
-    expect(indicadores).toContain('16 Inscripciones a cursos en matrículas activas');
-    expect(indicadores).toContain('29 Vacantes disponibles en secciones abiertas');
+    expect(indicadores).toContain('2 Matrículas activas consistentes');
+    expect(indicadores).toContain('5 Inscripciones a cursos (consistentes)');
+    expect(indicadores).toContain('1 Matrículas anuladas');
+    expect(indicadores).toContain('116 Vacantes disponibles en secciones abiertas');
+    expect(texto(fixture)).toContain(
+      'El servidor registra 9 matrículas activas: 2 consistentes y 7 registros históricos que requieren revisión',
+    );
     expect(texto(fixture)).toContain('Secciones abiertas sin vacantes');
-    // La coordinacion no consulta matriculas propias.
-    backend.expectNone((r) => r.url === `${API}/matriculas`);
+    // La coordinacion ya no pide los agregados por estado: revisa cada registro.
+    backend.expectNone((r) => r.url.includes('/matriculas/reporte'));
   });
 });

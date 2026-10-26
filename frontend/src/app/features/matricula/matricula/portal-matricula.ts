@@ -22,21 +22,26 @@ import { BloqueSemanal, HorarioSemanal } from '../../../shared/horario/horario-s
 import { resumenHorario } from '../../../shared/horario/horario-util';
 import { Curso } from '../../core-academico/curso/curso.model';
 import { CursoService } from '../../core-academico/curso/curso-service';
+import { Alumno, AlumnoService } from '../../base-universal/alumno/alumno-service';
 import { Cargo, CargoService } from '../../finanzas/cargo/cargo-service';
 import { Periodo } from '../periodo/periodo.model';
 import { PeriodoService } from '../periodo/periodo-service';
 import { Seccion } from '../seccion/seccion.model';
 import { SeccionService } from '../seccion/seccion-service';
+import { clasificarMatriculas } from './consistencia-matricula';
 import { matriculaVigente, motivoBloqueo, periodoActivo } from './contexto-matricula';
-import { ESTADO_ANULADA, Matricula, MatriculaReporte } from './matricula.model';
+import { Matricula } from './matricula.model';
 import { MatriculaService } from './matricula-service';
 
-/** Matriculas del periodo por estado (los estados registrados en Oracle, PENDIENTES C6). */
+/** Matriculas del periodo revisadas una por una (consistencia-matricula.ts). */
 interface ResumenPeriodo {
-  activas: number;
+  /** No anuladas, tal como las registra el servidor. */
+  registradas: number;
+  consistentes: number;
+  revision: number;
   anuladas: number;
-  /** Inscripciones a cursos (detalles) de las matriculas activas: INICIADA + CONFIRMADA. */
-  cursosActivos: number;
+  /** Inscripciones a cursos (detalles) de las matriculas consistentes. */
+  cursosConsistentes: number;
 }
 
 /**
@@ -72,6 +77,7 @@ export class PortalMatricula implements OnInit {
   private readonly seccionService = inject(SeccionService);
   private readonly cursoService = inject(CursoService);
   private readonly cargoService = inject(CargoService);
+  private readonly alumnoService = inject(AlumnoService);
   protected readonly auth = inject(AuthService);
 
   protected readonly resumenHorario = resumenHorario;
@@ -168,22 +174,24 @@ export class PortalMatricula implements OnInit {
       propias: estudiante ? this.matriculaService.buscar({}, 0, 50) : of(null),
       secciones: periodo ? this.seccionService.listar({ periodoId: periodo.id }) : of([] as Seccion[]),
       cursos: estudiante ? this.cursoService.listar() : of([] as Curso[]),
-      iniciadas: coordinacion ? this.matriculaService.reporte({ periodoId: periodo!.id, estado: 'INICIADA' }) : of(null),
-      confirmadas: coordinacion
-        ? this.matriculaService.reporte({ periodoId: periodo!.id, estado: 'CONFIRMADA' })
-        : of(null),
-      anuladas: coordinacion ? this.matriculaService.reporte({ periodoId: periodo!.id, estado: ESTADO_ANULADA }) : of(null),
+      delPeriodo: coordinacion ? this.matriculaService.buscarTodas({ periodoId: periodo!.id }) : of(null),
+      alumnos: coordinacion ? this.alumnoService.listar() : of([] as Alumno[]),
     }).subscribe({
       next: (datos) => {
         this.misMatriculas.set(datos.propias?.content ?? []);
         this.secciones.set(datos.secciones);
         this.cursos.set(new Map(datos.cursos.map((c) => [c.id, c])));
-        if (datos.iniciadas) {
-          const activas = [datos.iniciadas, datos.confirmadas].filter((r): r is MatriculaReporte => r !== null);
+        if (datos.delPeriodo) {
+          const c = clasificarMatriculas(datos.delPeriodo, {
+            alumnos: new Set(datos.alumnos.map((a) => a.id)),
+            secciones: new Map(datos.secciones.map((s): [number, Seccion] => [s.id, s])),
+          });
           this.resumen.set({
-            activas: activas.reduce((t, r) => t + r.totalMatriculas, 0),
-            anuladas: datos.anuladas?.totalMatriculas ?? 0,
-            cursosActivos: activas.reduce((t, r) => t + r.totalDetalles, 0),
+            registradas: c.registradas.length,
+            consistentes: c.consistentes.length,
+            revision: c.revision.length,
+            anuladas: c.anuladas.length,
+            cursosConsistentes: c.inscripcionesConsistentes,
           });
         }
         this.cargarCargo();

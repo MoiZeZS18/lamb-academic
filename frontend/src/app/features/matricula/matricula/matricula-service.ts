@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, forkJoin, map, of, switchMap } from 'rxjs';
 import { ApiService } from '../../../core/services/api-service';
 import {
   Matricula,
@@ -34,6 +34,24 @@ export class MatriculaService {
     if (filtros.periodoId) params = params.set('periodoId', filtros.periodoId);
     if (filtros.estado) params = params.set('estado', filtros.estado);
     return this.http.get<Pagina<Matricula>>(this.api.buildUrl(this.resource), { params });
+  }
+
+  /**
+   * Todas las matriculas que cumplen los filtros, recorriendo las paginas (el backend limita
+   * size a 100). Para reportes que necesitan revisar cada registro, no solo el agregado.
+   */
+  buscarTodas(filtros: MatriculaFiltros): Observable<Matricula[]> {
+    const TAMANO = 100;
+    return this.buscar(filtros, 0, TAMANO, 'id', 'asc').pipe(
+      switchMap((primera) => {
+        const resto = Array.from({ length: Math.max(primera.page.totalPages - 1, 0) }, (_, i) =>
+          this.buscar(filtros, i + 1, TAMANO, 'id', 'asc'),
+        );
+        return resto.length
+          ? forkJoin(resto).pipe(map((paginas) => [primera, ...paginas].flatMap((p) => p.content)))
+          : of(primera.content);
+      }),
+    );
   }
 
   obtener(id: number): Observable<Matricula> {

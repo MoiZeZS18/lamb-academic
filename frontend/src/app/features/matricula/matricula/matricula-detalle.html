@@ -31,6 +31,19 @@
   @if (loading()) {
     <p class="estado-carga" aria-busy="true">Consultando la matrícula…</p>
   } @else if (matricula(); as m) {
+    @if (motivosRevision().length) {
+      <div class="mensaje mensaje-alerta" role="status">
+        <div>
+          <strong>Registro histórico que requiere revisión.</strong> No se cuenta como matrícula activa consistente
+          en los reportes y se conserva sin cambios:
+          <ul class="lista-motivos">
+            @for (motivo of motivosRevision(); track motivo) {
+              <li>{{ motivo }}</li>
+            }
+          </ul>
+        </div>
+      </div>
+    }
     <div class="distribucion-con-panel">
       <div class="columna-principal">
       <article class="tarjeta">

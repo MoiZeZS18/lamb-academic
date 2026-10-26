@@ -21,6 +21,7 @@ import { Periodo } from '../periodo/periodo.model';
 import { PeriodoService } from '../periodo/periodo-service';
 import { Seccion } from '../seccion/seccion.model';
 import { SeccionService } from '../seccion/seccion-service';
+import { motivosRevision } from './consistencia-matricula';
 import { ESTADO_ANULADA, Matricula, Pagina } from './matricula.model';
 import { MatriculaService } from './matricula-service';
 
@@ -80,6 +81,15 @@ export class MatriculaList implements OnInit {
   protected readonly orden = signal<{ campo: string; direccion: 'asc' | 'desc' }>({ campo: 'fecha', direccion: 'desc' });
 
   protected readonly esCoordinacion = computed(() => this.auth.tieneRol(...ROLES_COORDINACION));
+
+  /** Motivos por los que una matricula activa requiere revision (registros previos a la integracion). */
+  protected motivosRevision(m: Matricula): string[] {
+    if (m.estado === ESTADO_ANULADA) return [];
+    return motivosRevision(m, {
+      alumnos: this.esCoordinacion() ? new Set(this.alumnos().keys()) : null,
+      secciones: this.secciones(),
+    });
+  }
   protected readonly listaAlumnos = computed(() => {
     const texto = this.textoAlumno().trim().toLowerCase();
     const todos = [...this.alumnos().values()].sort((a, b) => a.persona.nombreCompleto.localeCompare(b.persona.nombreCompleto));

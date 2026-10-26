@@ -245,16 +245,16 @@
           </header>
           <div class="cuerpo indicadores-fila">
             <div class="indicador">
-              <span class="valor">{{ r.activas }}</span>
-              <span class="etiqueta">Matrículas activas</span>
+              <span class="valor">{{ r.consistentes }}</span>
+              <span class="etiqueta">Matrículas activas consistentes</span>
+            </div>
+            <div class="indicador">
+              <span class="valor">{{ r.cursosConsistentes }}</span>
+              <span class="etiqueta">Inscripciones a cursos (consistentes)</span>
             </div>
             <div class="indicador">
               <span class="valor">{{ r.anuladas }}</span>
               <span class="etiqueta">Matrículas anuladas</span>
-            </div>
-            <div class="indicador">
-              <span class="valor">{{ r.cursosActivos }}</span>
-              <span class="etiqueta">Inscripciones a cursos en matrículas activas</span>
             </div>
             <div class="indicador">
               <span class="valor">{{ oferta().abiertas }} / {{ oferta().total }}</span>
@@ -265,6 +265,13 @@
               <span class="etiqueta">Vacantes disponibles en secciones abiertas</span>
             </div>
           </div>
+          @if (r.revision) {
+            <p class="cuerpo mensaje-revision texto-pequeno" role="status">
+              El servidor registra {{ r.registradas }} matrículas activas: {{ r.consistentes }} consistentes y
+              {{ r.revision }} registros históricos que requieren revisión (alumno o secciones inexistentes).
+              <a routerLink="/matricula/reportes">Ver el detalle en Reportes</a>.
+            </p>
+          }
         </section>
       }
 

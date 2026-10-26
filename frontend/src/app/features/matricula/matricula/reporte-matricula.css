@@ -16,3 +16,8 @@
 .valor-neutro {
   color: var(--lamb-gris-700) !important;
 }
+
+.conciliacion {
+  margin: 0;
+}
+

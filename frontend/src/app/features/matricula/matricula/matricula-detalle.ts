@@ -21,6 +21,7 @@ import { Periodo } from '../periodo/periodo.model';
 import { PeriodoService } from '../periodo/periodo-service';
 import { Seccion } from '../seccion/seccion.model';
 import { SeccionService } from '../seccion/seccion-service';
+import { motivosRevision } from './consistencia-matricula';
 import { ESTADO_ANULADA, Matricula, ResultadoCurso } from './matricula.model';
 import { MatriculaService } from './matricula-service';
 
@@ -58,6 +59,8 @@ export class MatriculaDetalle {
   protected readonly cursos = signal<Map<number, Curso>>(new Map());
   protected readonly cargo = signal<Cargo | null>(null);
   protected readonly nombreAlumno = signal<string>('');
+  /** Motivos de revision (registro historico inconsistente); vacio si la matricula es consistente. */
+  protected readonly motivosRevision = signal<string[]>([]);
   protected readonly loading = signal(true);
   protected readonly procesando = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -85,6 +88,7 @@ export class MatriculaDetalle {
         this.periodo.set(null);
         this.cargo.set(null);
         this.nombreAlumno.set('');
+        this.motivosRevision.set([]);
         this.cargar(id);
       });
     });
@@ -121,6 +125,14 @@ export class MatriculaDetalle {
             this.secciones.set(new Map(secciones.map((s) => [s.id, s])));
             this.cursos.set(new Map(cursos.map((c) => [c.id, c])));
             this.cargo.set(cargo);
+            this.motivosRevision.set(
+              matricula.estado === ESTADO_ANULADA
+                ? []
+                : motivosRevision(matricula, {
+                    alumnos: this.esCoordinacion() ? new Set(alumnos.map((a) => a.id)) : null,
+                    secciones: this.secciones(),
+                  }),
+            );
             this.loading.set(false);
           },
           error: (err: HttpErrorResponse) => {

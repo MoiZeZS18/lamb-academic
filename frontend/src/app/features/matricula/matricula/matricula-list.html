@@ -124,7 +124,15 @@
                 }
                 <td>{{ codigoPeriodo(m.periodoId) }}</td>
                 <td class="num col-secundaria">{{ m.fecha | date: 'dd/MM/yyyy' }}</td>
-                <td><app-etiqueta-estado [estado]="m.estado" /></td>
+                <td>
+                  <app-etiqueta-estado [estado]="m.estado" />
+                  @if (motivosRevision(m); as motivos) {
+                    @if (motivos.length) {
+                      <span class="marca-revision" [attr.title]="motivos.join(' ')">Requiere revisión</span>
+                      <span class="visualmente-oculto">: {{ motivos.join(' ') }}</span>
+                    }
+                  }
+                </td>
                 <td class="col-num col-secundaria">{{ m.detalles.length }}</td>
                 <td class="col-num">{{ m.totalCreditos ?? '—' }}</td>
                 <td>

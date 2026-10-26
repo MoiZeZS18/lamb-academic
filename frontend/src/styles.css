@@ -794,7 +794,25 @@ input[readonly] {
   font-weight: 600;
 }
 
+/* Registro historico que no cuadra con Base Universal / Core Academico (consistencia-matricula.ts). */
+.marca-revision {
+  display: inline-block;
+  margin-top: 0.25rem;
+  padding: 0.0625rem 0.5rem;
+  border: 1px solid var(--lamb-alerta-700);
+  border-radius: 999px;
+  color: var(--lamb-alerta-700);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* Los formularios no se estiran en pantallas anchas: lineas de lectura comodas */
 .formulario-tarjeta {
   max-width: 960px;
+}
+
+.lista-motivos {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
 }
