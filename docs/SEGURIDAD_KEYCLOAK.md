@@ -138,3 +138,31 @@ python -I infra/pruebas/matriz_accesos.py       # 22 casos reales 401/403/200 co
 
 La consola de administración está en `http://localhost:48080` (usuario `admin`, clave en
 `infra/.env`). `start-dev` no es apto para producción: falta TLS y hostname (S10b 9).
+
+## 8. Claves temporales para la presentación (solo local)
+
+Para iniciar sesión rápido frente al docente, los cinco usuarios de prueba (`ana.quispe`,
+`jose.apaza`, `coordinador`, `admin.lamb`, `cajero`) pueden usar claves distintas y fáciles de
+escribir (`Palabra-Palabra-NNN`). No se tocan la cuenta administradora de Keycloak (`admin` del realm
+`master`), las credenciales de Oracle ni ningún otro Keycloak (por ejemplo, el del puerto 38080).
+
+```powershell
+# Genera las claves de demostración (respalda antes las vigentes en keycloak-usuarios.anterior.env)
+python -I infra/keycloak/claves_demostracion.py
+# Las aplica en el Keycloak local (48080) con el mecanismo administrativo existente
+python -I infra/keycloak/sembrar_usuarios.py
+# Comprueba el inicio de sesión PKCE y los roles de los cinco usuarios
+python -I infra/pruebas/verificar_keycloak.py
+```
+
+Las claves solo están en `infra/secretos/keycloak-usuarios.env` (ignorado por Git); ningún script
+las imprime. Ese archivo no se proyecta durante la exposición.
+
+**Después de la presentación**, vuelve a claves largas aleatorias (recomendado) o a las anteriores:
+
+```powershell
+python -I infra/keycloak/claves_demostracion.py --nuevas      # 20 caracteres aleatorios por usuario
+# o: python -I infra/keycloak/claves_demostracion.py --restaurar  (claves previas a la demo)
+python -I infra/keycloak/sembrar_usuarios.py
+python -I infra/pruebas/verificar_keycloak.py
+```
