@@ -15,6 +15,7 @@ import pe.edu.upeu.lambacademic.compartido.seguridad.IdentidadToken;
 import pe.edu.upeu.lambacademic.exception.ReglaNegocioException;
 import pe.edu.upeu.lambacademic.exception.ResourceNotFoundException;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.CargoMatriculaResponse;
+import pe.edu.upeu.lambacademic.matricula.matricula.dto.ContextoAcademicoResponse;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.DetalleMatriculaRequest;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaReporteResponse;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaRequest;
@@ -122,6 +123,19 @@ public class MatriculaService {
         Map<Long, CargoFinancieroPort.CargoInfo> cargos =
                 cargoFinancieroPort.consultarCargos(pagina.map(Matricula::getId).getContent());
         return pagina.map(m -> conCargo(matriculaMapper.toResponse(m), cargos.get(m.getId())));
+    }
+
+    /**
+     * [U2] Escuela y habilitacion del alumno (Base Universal), para que la SPA consulte el plan
+     * vigente y los prerrequisitos de esa escuela: los mismos que valida registrar().
+     */
+    @Transactional(readOnly = true)
+    public ContextoAcademicoResponse contextoAcademico(Long estudianteId) {
+        EstudianteConsultaPort.EstudianteInfo info = estudianteConsultaPort.consultarEstudiante(estudianteId);
+        if (info == null || !info.existe()) {
+            return new ContextoAcademicoResponse(estudianteId, false, false, null);
+        }
+        return new ContextoAcademicoResponse(estudianteId, true, info.habilitado(), info.escuelaId());
     }
 
     @Transactional(readOnly = true)

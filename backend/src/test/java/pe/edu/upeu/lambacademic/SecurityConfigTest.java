@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -144,6 +145,25 @@ class SecurityConfigTest {
         verify(matriculaService).obtener(93L, 1033L);
         mockMvc.perform(get("/api/v1/matriculas/93").with(coordinador())).andExpect(status().isOk());
         verify(matriculaService).obtener(93L, null);
+    }
+
+    @Test
+    void contextoAcademicoDelEstudianteEsElSuyo() throws Exception {
+        mockMvc.perform(get("/api/v1/matriculas/contexto").with(estudiante(1001))).andExpect(status().isOk());
+        verify(matriculaService).contextoAcademico(1001L);
+        mockMvc.perform(get("/api/v1/matriculas/contexto").param("estudianteId", "1002").with(estudiante(1001)))
+                .andExpect(status().isForbidden());
+        verify(matriculaService, never()).contextoAcademico(1002L);
+    }
+
+    @Test
+    void contextoAcademicoParaElPersonalExigeElAlumno() throws Exception {
+        mockMvc.perform(get("/api/v1/matriculas/contexto").param("estudianteId", "1002").with(coordinador()))
+                .andExpect(status().isOk());
+        verify(matriculaService).contextoAcademico(1002L);
+        mockMvc.perform(get("/api/v1/matriculas/contexto").with(coordinador())).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/matriculas/contexto").param("estudianteId", "1002").with(cajero()))
+                .andExpect(status().isForbidden());
     }
 
     @Test

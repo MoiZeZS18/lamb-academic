@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, forkJoin, map, of, switchMap } from 'rxjs';
 import { ApiService } from '../../../core/services/api-service';
 import {
+  ContextoAcademico,
   Matricula,
   MatriculaFiltros,
   MatriculaRegistroRequest,
@@ -52,6 +53,12 @@ export class MatriculaService {
           : of(primera.content);
       }),
     );
+  }
+
+  /** Escuela y habilitacion del alumno; el ESTUDIANTE recibe el suyo aunque no envie estudianteId. */
+  contexto(estudianteId?: number | null): Observable<ContextoAcademico> {
+    const params = estudianteId ? new HttpParams().set('estudianteId', estudianteId) : undefined;
+    return this.http.get<ContextoAcademico>(this.api.buildUrl(`${this.resource}/contexto`), { params });
   }
 
   obtener(id: number): Observable<Matricula> {

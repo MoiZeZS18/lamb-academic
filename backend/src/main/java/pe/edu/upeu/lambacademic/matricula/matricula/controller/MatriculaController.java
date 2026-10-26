@@ -10,10 +10,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.*;
 
 import pe.edu.upeu.lambacademic.compartido.seguridad.IdentidadToken;
 
+import pe.edu.upeu.lambacademic.matricula.matricula.dto.ContextoAcademicoResponse;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaResponse;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaRegistroRequest;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaReporteResponse;
@@ -51,6 +53,27 @@ public class MatriculaController {
                 request.matricula(),
                 request.detalles()
         );
+    }
+
+    /**
+     * [U2] Contexto academico (escuela, habilitacion) para la inscripcion. El ESTUDIANTE solo obtiene
+     * el suyo: si no envia estudianteId se usa el del token y pedir el de otro alumno es un 403.
+     * El personal debe indicar el alumno.
+     */
+    @Operation(summary = "Escuela y habilitacion del alumno para armar su inscripcion")
+    @GetMapping("/contexto")
+    public ContextoAcademicoResponse contexto(
+            @RequestParam(required = false) Long estudianteId,
+            @AuthenticationPrincipal Jwt jwt) throws MissingServletRequestParameterException {
+
+        Long propio = IdentidadToken.estudianteRestringido(jwt);
+        if (propio != null) {
+            IdentidadToken.exigirPropio(propio, estudianteId == null ? propio : estudianteId, "el contexto académico");
+            estudianteId = propio;
+        } else if (estudianteId == null) {
+            throw new MissingServletRequestParameterException("estudianteId", "Long");
+        }
+        return matriculaService.contextoAcademico(estudianteId);
     }
 
     @Operation(summary = "Busca matriculas con filtros combinados, paginacion y orden")

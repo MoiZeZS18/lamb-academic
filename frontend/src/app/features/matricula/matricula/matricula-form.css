@@ -97,3 +97,13 @@ tr.elegida td {
   margin: 0;
   padding-left: 1.125rem;
 }
+
+.ubicacion-plan {
+  color: var(--lamb-turquesa-600);
+  font-weight: 500;
+}
+
+.ubicacion-plan.fuera-plan {
+  color: var(--lamb-gris-600);
+  font-weight: 400;
+}

@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
+import { pagina } from '../../../../testing/datos-matricula';
 import { cerrarSesionDePrueba, iniciarSesionDePrueba } from '../../../../testing/sesion-prueba';
 import { Seccion } from '../seccion/seccion.model';
 import { MatriculaForm } from './matricula-form';
@@ -54,7 +55,34 @@ function alumno(id: number, codigoEstudiante: string, nombreCompleto: string, nu
   };
 }
 
+/** Plan vigente de la escuela 1 (forma de PlanEstudioResponse); IS103 queda fuera a proposito. */
+const PLAN = {
+  id: 1,
+  idEscuela: 1,
+  escuelaNombre: 'Escuela Profesional de Ingenieria de Sistemas',
+  codigo: 'PLAN-EPIS-2026',
+  nombre: 'Plan EPIS 2026',
+  anio: 2026,
+  version: 1,
+  estado: 'VIGENTE',
+  totalCreditos: 11,
+  totalCursos: 3,
+  detalles: [
+    { id: 1, idCurso: 1, cursoCodigo: 'IS101', cursoNombre: 'Curso IS101', ciclo: 3, creditos: 4, tipo: 'OBLIGATORIO', idPrerrequisito: null, prerrequisitoCodigo: null },
+    { id: 2, idCurso: 2, cursoCodigo: 'IS102', cursoNombre: 'Curso IS102', ciclo: 3, creditos: 4, tipo: 'OBLIGATORIO', idPrerrequisito: null, prerrequisitoCodigo: null },
+    { id: 3, idCurso: 4, cursoCodigo: 'IS104', cursoNombre: 'Curso IS104', ciclo: 4, creditos: 3, tipo: 'ELECTIVO', idPrerrequisito: 1, prerrequisitoCodigo: 'IS101' },
+  ],
+};
+
+function contexto(estudianteId: number, extra: object = {}) {
+  return { estudianteId, existe: true, habilitado: true, escuelaId: 1, ...extra };
+}
+
 type Interno = {
+  cicloFiltro: { set(v: number | null): void };
+  soloDisponibles: { set(v: boolean): void };
+  ofertaFiltrada(): Seccion[];
+  noHabilitado(): boolean;
   busquedaAlumno: { set(v: string): void };
   alumnosFiltrados(): { id: number }[];
   bloqueosEnvio(): string[];
@@ -73,7 +101,7 @@ describe('MatriculaForm (cabecera-detalle, S9)', () => {
   let backend: HttpTestingController;
   let confirmacion: boolean;
 
-  async function crear(roles = ['ESTUDIANTE']) {
+  async function crear(roles = ['ESTUDIANTE'], contextoEstudiante: object = contexto(1033)) {
     const estudiante = roles.includes('ESTUDIANTE');
     iniciarSesionDePrueba(roles, estudiante ? 1033 : undefined);
     await TestBed.configureTestingModule({
@@ -92,6 +120,17 @@ describe('MatriculaForm (cabecera-detalle, S9)', () => {
     backend.expectOne((r) => r.url === `${API}/secciones`).flush(OFERTA);
     if (estudiante) {
       backend.expectOne((r) => r.url === `${API}/matriculas`).flush({ content: [], page: { size: 20, number: 0, totalElements: 0, totalPages: 0 } });
+      // El ESTUDIANTE no envia estudianteId: el backend usa el alumno_id del token.
+      const ctx = backend.expectOne(`${API}/matriculas/contexto`);
+      expect(ctx.request.params.has('estudianteId')).toBe(false);
+      ctx.flush(contextoEstudiante);
+      backend
+        .match((r) => r.url === `${API}/planes-estudio`)
+        .forEach((r) => {
+          expect(r.request.params.get('idEscuela')).toBe('1');
+          expect(r.request.params.get('estado')).toBe('VIGENTE');
+          r.flush([PLAN]);
+        });
     } else {
       backend.expectOne((r) => r.url === `${API}/alumnos` && r.params.get('estado') === 'ACTIVO').flush(ALUMNOS);
     }
@@ -142,6 +181,56 @@ describe('MatriculaForm (cabecera-detalle, S9)', () => {
     c.elegirSeccion(OFERTA[2]);
     responderPrerrequisitos();
     expect(c.bloqueosEnvio()).toEqual(['1 cruce(s) de horario.']);
+  });
+
+  it('consulta los prerrequisitos con la escuela del alumno (la misma que valida el backend)', async () => {
+    const { c } = await crear();
+    c.elegirSeccion(OFERTA[2]);
+    const req = backend.expectOne((r) => r.url === `${API}/cursos/4/prerrequisitos`);
+    expect(req.request.params.get('idEscuela')).toBe('1');
+    req.flush([]);
+  });
+
+  it('ubica cada curso en el ciclo de su plan y permite filtrar por ciclo', async () => {
+    const { c, fixture } = await crear();
+    const html = fixture.nativeElement as HTMLElement;
+    const texto = html.textContent!.replace(/\s+/g, ' ');
+    expect(texto).toContain('PLAN-EPIS-2026');
+    expect(texto).toContain('Ciclo 4 · Electivo · Requiere IS101');
+    c.soloDisponibles.set(false);
+    await fixture.whenStable();
+    expect(html.textContent).toContain('No figura en su plan de estudios');
+    // Orden por ciclo: los del ciclo 3 primero; IS103 (fuera del plan) al final.
+    expect(c.ofertaFiltrada().map((s) => s.curso.codigo)).toEqual(['IS101', 'IS102', 'IS104', 'IS103']);
+    c.cicloFiltro.set(4);
+    expect(c.ofertaFiltrada().map((s) => s.curso.codigo)).toEqual(['IS104']);
+  });
+
+  it('si Base Universal indica que el alumno no esta habilitado, no deja registrar', async () => {
+    const { c, fixture } = await crear(['ESTUDIANTE'], contexto(1033, { habilitado: false }));
+    await fixture.whenStable();
+    expect(c.noHabilitado()).toBe(true);
+    expect(c.bloqueosEnvio()).toContain('El alumno no está habilitado para matricularse (Base Universal).');
+    const boton = [...(fixture.nativeElement as HTMLElement).querySelectorAll('button')].find((b) =>
+      b.textContent!.includes('Revisar y registrar'),
+    )!;
+    expect(boton.disabled).toBe(true);
+  });
+
+  it('la COORDINACION, al elegir alumno, consulta su escuela y los prerrequisitos de esa escuela', async () => {
+    const { c, fixture } = await crear(['COORDINADOR']);
+    const select = (fixture.nativeElement as HTMLElement).querySelector<HTMLSelectElement>('#alumno')!;
+    select.value = [...select.options].find((o) => o.text.includes('Apaza'))!.value;
+    select.dispatchEvent(new Event('change'));
+    backend.match((r) => r.url === `${API}/matriculas`).forEach((r) => r.flush(pagina([])));
+    const ctx = backend.expectOne((r) => r.url === `${API}/matriculas/contexto`);
+    expect(ctx.request.params.get('estudianteId')).toBe('1033');
+    ctx.flush(contexto(1033));
+    backend.expectOne((r) => r.url === `${API}/planes-estudio`).flush([PLAN]);
+    c.elegirSeccion(OFERTA[0]);
+    const req = backend.expectOne((r) => r.url === `${API}/cursos/1/prerrequisitos`);
+    expect(req.request.params.get('idEscuela')).toBe('1');
+    req.flush([]);
   });
 
   it('calcula los creditos en vivo al agregar y quitar lineas', async () => {

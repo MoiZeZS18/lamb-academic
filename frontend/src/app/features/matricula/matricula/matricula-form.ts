@@ -19,12 +19,14 @@ import { alMenosUnaLinea, sinRepetidos } from '../../../shared/validadores';
 import { Alumno, AlumnoService } from '../../base-universal/alumno/alumno-service';
 import { CursoResumen } from '../../core-academico/curso/curso.model';
 import { CursoService } from '../../core-academico/curso/curso-service';
+import { DetallePlan, PlanEstudio } from '../../core-academico/plan/plan-estudio.model';
+import { PlanEstudioService } from '../../core-academico/plan/plan-estudio-service';
 import { Periodo } from '../periodo/periodo.model';
 import { PeriodoService } from '../periodo/periodo-service';
 import { Seccion } from '../seccion/seccion.model';
 import { SeccionService } from '../seccion/seccion-service';
 import { hoyIso, matriculaVigente, motivoBloqueo, periodoActivo } from './contexto-matricula';
-import { ESTADO_INICIAL_MATRICULA, Matricula } from './matricula.model';
+import { ContextoAcademico, ESTADO_INICIAL_MATRICULA, Matricula } from './matricula.model';
 import { MatriculaService } from './matricula-service';
 
 interface LineaValor {
@@ -64,6 +66,7 @@ export class MatriculaForm implements OnInit {
   private readonly periodoService = inject(PeriodoService);
   private readonly seccionService = inject(SeccionService);
   private readonly cursoService = inject(CursoService);
+  private readonly planService = inject(PlanEstudioService);
   private readonly alumnoService = inject(AlumnoService);
   private readonly matriculaService = inject(MatriculaService);
   private readonly dialog = inject(MatDialog);
@@ -79,6 +82,11 @@ export class MatriculaForm implements OnInit {
   protected readonly alumnos = signal<Alumno[]>([]);
   protected readonly prerrequisitos = signal<Map<number, CursoResumen[]>>(new Map());
   protected readonly existente = signal<Matricula | null>(null);
+  /** Escuela y habilitacion del alumno elegido (GET /matriculas/contexto). */
+  protected readonly contexto = signal<ContextoAcademico | null>(null);
+  /** Plan vigente de la escuela del alumno (Core Academico); null si la escuela no tiene uno. */
+  protected readonly plan = signal<PlanEstudio | null>(null);
+  protected readonly cicloFiltro = signal<number | null>(null);
   protected readonly cargando = signal(true);
   protected readonly enviando = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -129,12 +137,29 @@ export class MatriculaForm implements OnInit {
     return [...cursos.values()].sort((a, b) => a.codigo.localeCompare(b.codigo));
   });
 
+  /** Ubicacion de cada curso en el plan vigente del alumno (ciclo, tipo, prerrequisito). */
+  protected readonly planPorCurso = computed(
+    () => new Map((this.plan()?.detalles ?? []).map((d): [number, DetallePlan] => [d.idCurso, d])),
+  );
+
+  /** Ciclos del plan que tienen secciones en la oferta del periodo. */
+  protected readonly ciclosOfertados = computed(() =>
+    [...new Set(this.secciones().map((s) => this.planPorCurso().get(s.curso.id)?.ciclo))]
+      .filter((c): c is number => c !== undefined)
+      .sort((a, b) => a - b),
+  );
+
   protected readonly ofertaFiltrada = computed(() => {
     const texto = this.busqueda().trim().toLowerCase();
+    const ciclo = this.cicloFiltro();
+    const enPlan = this.planPorCurso();
+    // Con plan: primero por ciclo (los cursos fuera del plan al final); luego por codigo y grupo.
+    const orden = (s: Seccion) => enPlan.get(s.curso.id)?.ciclo ?? Number.MAX_SAFE_INTEGER;
     return this.secciones()
       .filter((s) => !this.soloDisponibles() || this.disponible(s))
+      .filter((s) => ciclo === null || enPlan.get(s.curso.id)?.ciclo === ciclo)
       .filter((s) => !texto || `${s.curso.codigo} ${s.curso.nombre} ${s.docenteNombre ?? ''}`.toLowerCase().includes(texto))
-      .sort((a, b) => a.curso.codigo.localeCompare(b.curso.codigo) || a.grupo.localeCompare(b.grupo));
+      .sort((a, b) => orden(a) - orden(b) || a.curso.codigo.localeCompare(b.curso.codigo) || a.grupo.localeCompare(b.grupo));
   });
 
   /** Secciones elegidas (lineas con seccion valida), en el orden del formulario. */
@@ -170,6 +195,12 @@ export class MatriculaForm implements OnInit {
 
   protected readonly bloqueo = computed(() => motivoBloqueo(this.periodo()));
 
+  /** Base Universal indica que el alumno no esta habilitado: el backend rechazaria el registro. */
+  protected readonly noHabilitado = computed(() => {
+    const c = this.contexto();
+    return c !== null && (!c.existe || !c.habilitado);
+  });
+
   /**
    * Regla visible del backend (PrerrequisitoNoCumplido): un curso y su prerrequisito no pueden
    * llevarse en el mismo periodo. Se avisa antes de enviar; el historial lo verifica el backend.
@@ -197,6 +228,7 @@ export class MatriculaForm implements OnInit {
         return;
       }
       this.form.controls.estudianteId.setValue(alumnoId);
+      this.cargarContexto(null);
     }
     this.periodoService.listar().subscribe({
       next: (periodos) => {
@@ -302,11 +334,43 @@ export class MatriculaForm implements OnInit {
     this.cargarPrerrequisitos(cursoId);
   }
 
+  /**
+   * Escuela del alumno y su plan vigente. Los prerrequisitos dependen de la escuela, asi que al
+   * cambiar de alumno se vuelven a consultar los de los cursos ya elegidos.
+   */
+  private cargarContexto(estudianteId: number | null): void {
+    this.contexto.set(null);
+    this.plan.set(null);
+    this.cicloFiltro.set(null);
+    this.prerrequisitos.set(new Map());
+    this.matriculaService.contexto(estudianteId).subscribe({
+      next: (contexto) => {
+        this.contexto.set(contexto);
+        const cursosElegidos = (this.valoresDetalles() as LineaValor[]).map((l) => l.cursoId);
+        cursosElegidos.forEach((cursoId) => this.cargarPrerrequisitos(cursoId));
+        if (!contexto.escuelaId) return;
+        this.planService.buscar(contexto.escuelaId, 'VIGENTE').subscribe({
+          next: (planes) => this.plan.set(planes[0] ?? null),
+          error: () => this.plan.set(null),
+        });
+      },
+      error: () => this.contexto.set(null),
+    });
+  }
+
+  /** Solo con la escuela conocida: sin ella, el backend mezclaria los planes de todas las escuelas. */
   private cargarPrerrequisitos(cursoId: number): void {
-    if (!cursoId || this.prerrequisitos().has(cursoId)) return;
-    this.cursoService.prerrequisitos(cursoId).subscribe({
-      next: (lista) => this.prerrequisitos.update((m) => new Map(m).set(cursoId, lista)),
-      error: () => this.prerrequisitos.update((m) => new Map(m).set(cursoId, [])),
+    const escuelaId = this.contexto()?.escuelaId;
+    if (!cursoId || !escuelaId || this.prerrequisitos().has(cursoId)) return;
+    const guardar = (lista: CursoResumen[]) => {
+      // Si mientras tanto cambio el alumno (y su escuela), esta respuesta ya no aplica.
+      if (this.contexto()?.escuelaId === escuelaId) {
+        this.prerrequisitos.update((m) => new Map(m).set(cursoId, lista));
+      }
+    };
+    this.cursoService.prerrequisitos(cursoId, escuelaId).subscribe({
+      next: guardar,
+      error: () => guardar([]),
     });
   }
 
@@ -317,7 +381,11 @@ export class MatriculaForm implements OnInit {
   /** Coordinacion: al elegir alumno se verifica si ya tiene matricula vigente en el periodo. */
   protected cambiarAlumno(): void {
     this.existente.set(null);
-    if (this.form.controls.estudianteId.value) this.verificarExistente();
+    const estudianteId = this.form.controls.estudianteId.value;
+    if (estudianteId) {
+      this.verificarExistente();
+      this.cargarContexto(estudianteId);
+    }
   }
 
   private verificarExistente(): void {
@@ -335,6 +403,7 @@ export class MatriculaForm implements OnInit {
   protected readonly bloqueosEnvio = computed(() => {
     const mensajes: string[] = [];
     if (!this.alumnoElegido()) mensajes.push('Elige el alumno.');
+    if (this.noHabilitado()) mensajes.push('El alumno no está habilitado para matricularse (Base Universal).');
     if (this.existente()) mensajes.push('El alumno ya tiene una matrícula vigente en el periodo.');
     if (!this.elegidas().length) mensajes.push('Elige al menos un curso.');
     if (this.cruces().length) mensajes.push(`${this.cruces().length} cruce(s) de horario.`);

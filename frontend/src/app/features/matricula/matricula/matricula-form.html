@@ -78,6 +78,12 @@
             <a [routerLink]="['/matricula/consulta', m.id]">Ver mi matrícula</a>
           </p>
         }
+        @if (noHabilitado()) {
+          <p class="mensaje mensaje-error" role="alert">
+            {{ esEstudiante() ? 'Tu registro de alumno no está habilitado' : 'El alumno elegido no está habilitado' }} para
+            matricularse según Base Universal. La matrícula no puede registrarse hasta que la administración lo habilite.
+          </p>
+        }
 
         <!-- ============ Oferta ============ -->
         <section class="tarjeta" aria-labelledby="t-oferta">
@@ -101,6 +107,17 @@
                   [ngModelOptions]="{ standalone: true }"
                 />
               </div>
+              @if (ciclosOfertados().length) {
+                <div class="campo campo-corto">
+                  <label for="ciclo" class="visualmente-oculto">Ciclo del plan</label>
+                  <select id="ciclo" [ngModel]="cicloFiltro()" (ngModelChange)="cicloFiltro.set($event)" [ngModelOptions]="{ standalone: true }">
+                    <option [ngValue]="null">Todos los ciclos</option>
+                    @for (c of ciclosOfertados(); track c) {
+                      <option [ngValue]="c">Ciclo {{ c }}</option>
+                    }
+                  </select>
+                </div>
+              }
               <label class="casilla">
                 <input
                   type="checkbox"
@@ -130,6 +147,18 @@
                     <td>
                       <span class="celda-principal">{{ s.curso.codigo }}</span>
                       <div class="texto-secundario texto-pequeno">{{ s.curso.nombre }} · {{ s.curso.creditos }} cr.</div>
+                      @if (plan()) {
+                        @if (planPorCurso().get(s.curso.id); as d) {
+                          <div class="texto-pequeno ubicacion-plan">
+                            Ciclo {{ d.ciclo }} · {{ d.tipo === 'OBLIGATORIO' ? 'Obligatorio' : 'Electivo' }}
+                            @if (d.prerrequisitoCodigo) {
+                              · Requiere {{ d.prerrequisitoCodigo }}
+                            }
+                          </div>
+                        } @else {
+                          <div class="texto-pequeno ubicacion-plan fuera-plan">No figura en su plan de estudios</div>
+                        }
+                      }
                     </td>
                     <td>
                       Grupo {{ s.grupo }}
@@ -293,6 +322,13 @@
               <dd>{{ nombreAlumno() || 'Sin seleccionar' }}</dd>
               <dt>Periodo</dt>
               <dd>{{ periodo()?.codigo }}</dd>
+              @if (plan(); as pl) {
+                <dt>Plan de estudios</dt>
+                <dd>{{ pl.codigo }}<span class="texto-secundario texto-pequeno"> · {{ pl.escuelaNombre }}</span></dd>
+              } @else if (contexto() && !contexto()!.escuelaId) {
+                <dt>Plan de estudios</dt>
+                <dd class="texto-secundario">Sin escuela registrada</dd>
+              }
               <dt>Cursos</dt>
               <dd class="num">{{ elegidas().length }}</dd>
               <dt>Créditos</dt>
@@ -340,7 +376,7 @@
         }
 
         <div class="acciones acciones-envio">
-          <button type="button" class="boton boton-primario" [disabled]="enviando() || !!existente()" (click)="confirmarYRegistrar()">
+          <button type="button" class="boton boton-primario" [disabled]="enviando() || !!existente() || noHabilitado()" (click)="confirmarYRegistrar()">
             {{ enviando() ? 'Registrando…' : 'Revisar y registrar' }}
           </button>
           <a class="boton" routerLink="/matricula">Cancelar</a>

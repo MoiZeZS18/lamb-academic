@@ -17,7 +17,12 @@ export class CursoService {
     return this.http.get<Curso[]>(this.api.buildUrl(this.resource), { params });
   }
 
-  prerrequisitos(cursoId: number): Observable<CursoResumen[]> {
-    return this.http.get<CursoResumen[]>(this.api.buildUrl(`${this.resource}/${cursoId}/prerrequisitos`));
+  /**
+   * Prerrequisitos del curso en los planes vigentes. Con idEscuela, solo los del plan de esa escuela:
+   * los mismos que valida el registro de matricula para el alumno.
+   */
+  prerrequisitos(cursoId: number, idEscuela?: number | null): Observable<CursoResumen[]> {
+    const params = idEscuela ? new HttpParams().set('idEscuela', idEscuela) : undefined;
+    return this.http.get<CursoResumen[]>(this.api.buildUrl(`${this.resource}/${cursoId}/prerrequisitos`), { params });
   }
 }

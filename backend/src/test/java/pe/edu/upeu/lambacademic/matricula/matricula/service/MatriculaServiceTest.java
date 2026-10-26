@@ -14,6 +14,7 @@ import org.mapstruct.factory.Mappers;
 import pe.edu.upeu.lambacademic.exception.AccesoDenegadoException;
 import pe.edu.upeu.lambacademic.exception.ReglaNegocioException;
 import pe.edu.upeu.lambacademic.exception.ResourceNotFoundException;
+import pe.edu.upeu.lambacademic.matricula.matricula.dto.ContextoAcademicoResponse;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.DetalleMatriculaRequest;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaRequest;
 import pe.edu.upeu.lambacademic.matricula.matricula.dto.MatriculaResponse;
@@ -104,6 +105,20 @@ class MatriculaServiceTest {
         seccion(1001L, 1L, "IS101", 4, PERIODO, 10, true, horario("LUNES", 8, 10));
         seccion(1002L, 2L, "IS102", 4, PERIODO, 10, true, horario("MARTES", 8, 10));
         seccion(1003L, 3L, "IS103", 3, PERIODO, 10, true, horario("LUNES", 10, 12));
+    }
+
+    @Test
+    void contextoAcademicoDevuelveLaEscuelaDelAlumno() {
+        when(estudiantePort.consultarEstudiante(1001L))
+                .thenReturn(new EstudianteConsultaPort.EstudianteInfo(1001L, true, true, 1L));
+        assertThat(service.contextoAcademico(1001L))
+                .isEqualTo(new ContextoAcademicoResponse(1001L, true, true, 1L));
+    }
+
+    @Test
+    void contextoAcademicoDeAlumnoInexistenteNoInventaEscuela() {
+        when(estudiantePort.consultarEstudiante(1L)).thenReturn(EstudianteConsultaPort.EstudianteInfo.inexistente(1L));
+        assertThat(service.contextoAcademico(1L)).isEqualTo(new ContextoAcademicoResponse(1L, false, false, null));
     }
 
     @Test

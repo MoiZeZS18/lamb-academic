@@ -67,3 +67,11 @@ export interface MatriculaReporte {
   totalMatriculas: number;
   totalDetalles: number;
 }
+
+/** GET /api/v1/matriculas/contexto: escuela y habilitacion del alumno (Base Universal). */
+export interface ContextoAcademico {
+  estudianteId: number;
+  existe: boolean;
+  habilitado: boolean;
+  escuelaId: number | null;
+}
