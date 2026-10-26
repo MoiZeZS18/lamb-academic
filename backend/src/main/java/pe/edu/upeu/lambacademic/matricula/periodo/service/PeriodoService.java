@@ -16,9 +16,8 @@ import pe.edu.upeu.lambacademic.matricula.periodo.repository.PeriodoRepository;
 import java.util.List;
 
 /**
- * CRUD de periodos academicos. Integracion: "Periodo no encontrado" respondia 500 por usar
- * RuntimeException; ahora responde 404, valida fechas y codigo unico, y no permite eliminar
- * un periodo con matriculas (las secciones lo protegen ademas con FK en Oracle).
+ * CRUD de periodos academicos: fechas validas, codigo unico y 404 si no existe. No se elimina un
+ * periodo con matriculas; si tiene secciones, lo impide ademas la FK SECCIONES.ID_PERIODO en Oracle.
  */
 @Slf4j
 @Service

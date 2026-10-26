@@ -15,10 +15,6 @@ public interface SeccionConsultaPort {
 
     void liberarCupo(Long seccionId);
 
-    /**
-     * cursoId, cursoCodigo, creditos, periodoId y abierta se agregaron en la integracion
-     * con Core Academico (antes el adaptador simulado solo devolvia los cupos).
-     */
     record SeccionInfo(
             Long seccionId,
             Integer cupoTotal,

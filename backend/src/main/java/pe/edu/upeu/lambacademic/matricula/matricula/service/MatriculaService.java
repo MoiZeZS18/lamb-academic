@@ -61,13 +61,10 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Registro transaccional de matricula (cabecera-detalle).
- *
- * Integracion: las reglas originales (periodo activo, estudiante, seccion repetida, cupos,
- * cruce de horarios) se conservan en el mismo orden. Se agregan, marcadas con [integracion]:
- * periodo/fecha, matricula activa duplicada, seccion del periodo y abierta, curso repetido,
- * prerrequisitos, reserva atomica de cupos y generacion del cargo financiero, todo dentro
- * de la MISMA transaccion: si cualquier paso falla, no queda nada registrado.
+ * Registro transaccional de matricula (cabecera-detalle). Valida periodo activo y fecha, alumno
+ * habilitado, una matricula activa por periodo, secciones del periodo, abiertas y con cupo, curso
+ * repetido, prerrequisitos y cruces; luego reserva los cupos y genera el cargo financiero. Todo en
+ * la MISMA transaccion: si cualquier paso falla, no queda nada registrado.
  */
 @Slf4j
 @Service
@@ -111,7 +108,6 @@ public class MatriculaService {
         );
     }
 
-    /** [integracion] Antes esta consulta la hacia el controller directo contra el repositorio. */
     @Transactional(readOnly = true)
     public Page<MatriculaResponse> buscar(Long estudianteId, Long periodoId, String estado,
                                           int page, int size, String sortBy, String direction) {
@@ -119,14 +115,14 @@ public class MatriculaService {
         String campo = CAMPOS_ORDENABLES.contains(sortBy) ? sortBy : "fecha";
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.clamp(size, 1, 100), Sort.by(sortDirection, campo));
         Page<Matricula> pagina = matriculaRepository.buscar(estudianteId, periodoId, estado, pageable);
-        // Correccion: el cargo se consulta en lote en Finanzas (antes siempre salia null en el listado).
+        // El cargo de cada matricula se consulta en lote en Finanzas (una sola consulta por pagina).
         Map<Long, CargoFinancieroPort.CargoInfo> cargos =
                 cargoFinancieroPort.consultarCargos(pagina.map(Matricula::getId).getContent());
         return pagina.map(m -> conCargo(matriculaMapper.toResponse(m), cargos.get(m.getId())));
     }
 
     /**
-     * [U2] Escuela y habilitacion del alumno (Base Universal), para que la SPA consulte el plan
+     * Escuela y habilitacion del alumno (Base Universal), para que la SPA consulte el plan
      * vigente y los prerrequisitos de esa escuela: los mismos que valida registrar().
      */
     @Transactional(readOnly = true)
@@ -144,7 +140,7 @@ public class MatriculaService {
     }
 
     /**
-     * [U2] estudianteRestringido = null: personal (sin filtro). Con valor: el ALUMNOS.ID del token;
+     * estudianteRestringido = null: personal (sin filtro). Con valor: el ALUMNOS.ID del token;
      * la matricula de otro alumno responde 403 (existe, pero no es suya), no 404.
      */
     @Transactional(readOnly = true)
@@ -171,7 +167,6 @@ public class MatriculaService {
             );
         }
 
-        // [integracion] la fecha de la matricula debe caer dentro del periodo
         if (request.fecha().isBefore(periodo.getFechaInicio()) || request.fecha().isAfter(periodo.getFechaFin())) {
             throw new ReglaNegocioException("La fecha " + request.fecha() + " esta fuera del periodo "
                     + periodo.getCodigo() + " (" + periodo.getFechaInicio() + " a " + periodo.getFechaFin() + ")");
@@ -201,7 +196,7 @@ public class MatriculaService {
             );
         }
 
-        // [integracion] una sola matricula activa por estudiante y periodo
+        // Una sola matricula activa por estudiante y periodo.
         String claveActiva = claveActiva(request.estudianteId(), periodo.getId());
         if (matriculaRepository.existsByClaveActiva(claveActiva)) {
             throw new MatriculaDuplicadaException("El estudiante " + request.estudianteId()
@@ -232,7 +227,6 @@ public class MatriculaService {
                 );
             }
 
-            // [integracion] la seccion debe pertenecer al periodo y estar abierta
             if (!periodo.getId().equals(seccion.periodoId())) {
                 throw new SeccionNoDisponibleException("La sección " + seccionId
                         + " no pertenece al periodo " + periodo.getCodigo());
@@ -248,7 +242,6 @@ public class MatriculaService {
                 );
             }
 
-            // [integracion] no se puede llevar el mismo curso en dos secciones
             if (!cursosRegistrados.add(seccion.cursoId())) {
                 throw new CursoDuplicadoException("El curso " + seccion.cursoCodigo()
                         + " está repetido en la matrícula");
@@ -257,7 +250,7 @@ public class MatriculaService {
             seccionesValidadas.put(seccionId, seccion);
         }
 
-        // [integracion] prerrequisitos segun la malla vigente de la escuela del estudiante
+        // Prerrequisitos segun la malla vigente de la escuela del estudiante.
         if (politicaPrerrequisitos != PoliticaPrerrequisitos.NINGUNA) {
             validarPrerrequisitos(request.estudianteId(), estudiante.escuelaId(), periodo,
                     seccionesValidadas.values(), cursosRegistrados);
@@ -325,7 +318,7 @@ public class MatriculaService {
                     + " ya tiene una matricula activa en el periodo " + periodo.getCodigo());
         }
 
-        // [integracion] reserva atomica de cupos: si una seccion se llena entre la validacion
+        // Reserva atomica de cupos: si una seccion se llena entre la validacion
         // y este punto, la excepcion revierte toda la matricula (y los cupos ya reservados).
         // Orden ascendente de id: dos matriculas concurrentes bloquean las filas en el mismo
         // orden y no pueden interbloquearse (ORA-00060).
@@ -333,7 +326,7 @@ public class MatriculaService {
             seccionConsultaPort.reservarCupo(seccionId);
         }
 
-        // [integracion] cargo financiero en la misma transaccion (idempotente por matricula)
+        // Cargo financiero en la misma transaccion (idempotente por matricula).
         int cuotas = request.numeroCuotas() == null ? cuotasPorDefecto : request.numeroCuotas();
         CargoFinancieroPort.CargoInfo cargo = cargoFinancieroPort.generarCargo(matricula.getId(),
                 matricula.getEstudianteId(), periodo.getId(), periodo.getCodigo(), totalCreditos, cuotas);
@@ -346,7 +339,7 @@ public class MatriculaService {
     }
 
     /**
-     * [integracion] Anula la matricula: libera los cupos, anula el cargo (si no tiene pagos) y
+     * Anula la matricula: libera los cupos, anula el cargo (si no tiene pagos) y
      * deja libre la clave activa para que el estudiante pueda volver a matricularse.
      */
     @Transactional
@@ -357,7 +350,7 @@ public class MatriculaService {
         }
         cargoFinancieroPort.anularCargo(id);
         if (matricula.getClaveActiva() != null) {
-            // Solo las matriculas registradas con la integracion reservaron cupos reales.
+            // Las matriculas previas a la integracion (sin clave activa) nunca reservaron cupos.
             matricula.getDetalles().stream().map(DetalleMatricula::getSeccionId).sorted()
                     .forEach(seccionConsultaPort::liberarCupo);
         }
@@ -370,7 +363,7 @@ public class MatriculaService {
     }
 
     /**
-     * [integracion] Recuperacion: genera el cargo de una matricula que no lo tenga (por ejemplo,
+     * Recuperacion: genera el cargo de una matricula que no lo tenga (por ejemplo,
      * las registradas antes de integrar Finanzas). Idempotente: no duplica cargos.
      */
     @Transactional
@@ -392,7 +385,7 @@ public class MatriculaService {
     }
 
     /**
-     * [integracion, A1] Registra el resultado final de un curso de la matricula. Solo se admite
+     * Registra el resultado final de un curso de la matricula (PENDIENTES A1). Solo se admite
      * cuando el periodo esta CERRADO (el curso termino) y el detalle tiene curso identificado
      * (las matriculas previas a la integracion no lo tienen). Permite corregir un resultado.
      */

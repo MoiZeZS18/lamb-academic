@@ -5,10 +5,7 @@ import org.springframework.stereotype.Component;
 import pe.edu.upeu.lambacademic.baseuniversal.alumno.service.AlumnoService;
 import pe.edu.upeu.lambacademic.matricula.matricula.port.EstudianteConsultaPort;
 
-/**
- * Integracion real con Base Universal (antes devolvia siempre existe = true, habilitado = true).
- * El estudianteId de la matricula es el id de ALUMNOS.
- */
+/** Consulta del alumno en Base Universal. El estudianteId de la matricula es el id de ALUMNOS. */
 @Component
 @RequiredArgsConstructor
 public class EstudianteConsultaAdapter implements EstudianteConsultaPort {

@@ -267,7 +267,6 @@ a:hover {
   font-weight: 500;
 }
 
-/* Indicador numerico */
 .indicador {
   display: flex;
   flex-direction: column;
@@ -558,7 +557,6 @@ input[readonly] {
   color: var(--lamb-error-700);
 }
 
-/* Mensajes en linea */
 .mensaje {
   display: flex;
   gap: 0.625rem;
@@ -655,7 +653,6 @@ input[readonly] {
   background: var(--lamb-error-700);
 }
 
-/* Paginador */
 .paginador {
   display: flex;
   flex-wrap: wrap;

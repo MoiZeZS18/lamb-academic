@@ -56,7 +56,8 @@ export const routes: Routes = [
       },
       {
         path: 'matricula/periodos',
-        // Pantallas de gestion: el estudiante ve la oferta en Inscripcion y su periodo en el portal.
+        // Periodos y Secciones son pantallas de gestion. SecurityConfig permite leerlos con cualquier
+        // sesion porque la inscripcion los usa; el estudiante ve la oferta alli y el periodo en el portal.
         canActivate: [authGuard, rolGuard(...ROLES_COORDINACION)],
         loadComponent: () => import('./features/matricula/periodo/periodo-list').then((m) => m.PeriodoList),
       },
@@ -72,7 +73,6 @@ export const routes: Routes = [
       },
       {
         path: 'matricula/secciones',
-        // Pantallas de gestion: el estudiante ve la oferta en Inscripcion y su periodo en el portal.
         canActivate: [authGuard, rolGuard(...ROLES_COORDINACION)],
         loadComponent: () => import('./features/matricula/seccion/seccion-list').then((m) => m.SeccionList),
       },

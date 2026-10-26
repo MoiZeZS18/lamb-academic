@@ -5,7 +5,7 @@ public interface EstudianteConsultaPort {
     EstudianteInfo consultarEstudiante(Long estudianteId);
 
     /**
-     * escuelaId (agregado en la integracion) permite resolver los prerrequisitos segun el
+     * escuelaId permite resolver los prerrequisitos segun el
      * plan de estudios vigente de la escuela del estudiante.
      */
     record EstudianteInfo(

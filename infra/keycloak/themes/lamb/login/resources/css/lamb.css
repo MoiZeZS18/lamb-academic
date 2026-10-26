@@ -1,15 +1,9 @@
 @charset "UTF-8";
 /*
- * Identidad LAMB Academic · Universidad Peruana Union sobre el tema keycloak.v2 (PatternFly 5).
- *
- * Solo CSS y una imagen: no se reemplaza ninguna plantilla FreeMarker, asi que el formulario, los
- * mensajes de error, OAuth2/OIDC, PKCE, las redirecciones y el cierre de sesion siguen siendo los
- * del tema oficial. Para volver al aspecto anterior basta con revertir este archivo.
- *
- * Distribucion: identidad institucional a la izquierda (marino con el logo UPeU) y formulario a la
- * derecha; en pantallas angostas el panel institucional pasa arriba como una franja.
- * Logo: resources/img/logo-upeu.png, version transparente del archivo oficial entregado por el
- * equipo (mismas proporciones y colores; solo se quito el fondo cuadrado).
+ * Identidad LAMB Academic · UPeU sobre keycloak.v2 (PatternFly 5). Solo CSS y una imagen: no se
+ * reemplaza ninguna plantilla FreeMarker, asi que el formulario, OAuth2/OIDC, PKCE, las redirecciones
+ * y el cierre de sesion siguen siendo los del tema oficial.
+ * logo-upeu.png es el logo oficial entregado por el equipo sin su fondo cuadrado (mismas proporciones).
  */
 :root {
   --lamb-marino: #0f2a4a;
@@ -67,7 +61,6 @@ body,
   text-align: center;
 }
 
-/* Logo oficial UPeU (version sin fondo), sin deformar: contain y alto fijo. */
 #kc-header.pf-v5-c-login__header::before {
   content: '';
   display: block;
@@ -100,7 +93,6 @@ body,
   font-weight: 600;
 }
 
-/* Bajada institucional (texto fijo del tema, en espanol). */
 #kc-header-wrapper.pf-v5-c-brand::after {
   content: 'Sistema académico universitario · Matrícula';
   font-size: 0.95rem;

@@ -67,7 +67,6 @@ export class ReporteMatricula implements OnInit {
   protected readonly porEstado = signal<{ estado: string; reporte: MatriculaReporte }[]>([]);
   protected readonly ocupacion = signal<SeccionOcupacion[]>([]);
   protected readonly cargos = signal<CargoEstadoReporte[]>([]);
-  /** Matriculas del periodo revisadas una por una contra Base Universal y Core Academico. */
   protected readonly clasificacion = signal<ClasificacionPeriodo | null>(null);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -100,7 +99,6 @@ export class ReporteMatricula implements OnInit {
     };
   });
 
-  /** Consistentes y en revision por estado, para la tabla. */
   protected porEstadoDetalle(estado: string) {
     const c = this.clasificacion();
     const deEstado = (lista: Matricula[]) => lista.filter((m) => m.estado === estado);

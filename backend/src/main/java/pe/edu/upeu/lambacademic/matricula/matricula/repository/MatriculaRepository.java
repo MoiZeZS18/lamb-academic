@@ -19,7 +19,7 @@ import pe.edu.upeu.lambacademic.matricula.matricula.entity.ResultadoCurso;
 
 public interface MatriculaRepository extends JpaRepository<Matricula, Long> {
 
-    // Integracion: sin @EntityGraph aqui. Con JOIN FETCH de una coleccion + Pageable, Hibernate
+    // Sin @EntityGraph aqui: con JOIN FETCH de una coleccion + Pageable, Hibernate
     // paginaba en memoria (HHH90003004); los detalles se cargan por lotes (@BatchSize).
     @Query("""
             SELECT m

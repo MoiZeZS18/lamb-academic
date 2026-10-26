@@ -1,9 +1,8 @@
 package pe.edu.upeu.lambacademic.matricula.matricula.dto;
 
 /**
- * [U2] Contexto academico del alumno para armar la inscripcion: su escuela (para resolver el plan de
- * estudios vigente y los prerrequisitos que valida registrar) y si esta habilitado para matricularse.
- * Sale de Base Universal a traves de EstudianteConsultaPort, el mismo puerto que usa el registro.
+ * Escuela del alumno (para resolver su plan vigente y los prerrequisitos que valida el registro) y
+ * si esta habilitado para matricularse. Sale de Base Universal por EstudianteConsultaPort.
  */
 public record ContextoAcademicoResponse(
         Long estudianteId,

@@ -8,10 +8,7 @@ import pe.edu.upeu.lambacademic.matricula.matricula.port.SeccionConsultaPort;
 
 import java.util.List;
 
-/**
- * Integracion real con Core Academico (antes devolvia cupos fijos 30/30 y horarios vacios).
- * Solo usa el servicio publico SeccionService, nunca el repositorio ni la entidad Seccion.
- */
+/** Secciones, cupos y horarios de Core Academico, solo a traves de su servicio publico SeccionService. */
 @Component
 @RequiredArgsConstructor
 public class SeccionConsultaAdapter implements SeccionConsultaPort {

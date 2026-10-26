@@ -35,7 +35,7 @@ public class MatriculaController {
     private final MatriculaService matriculaService;
 
     /*
-     * [U2, S10b 7.3] Un ESTUDIANTE solo opera sobre su propia matricula: su ALUMNOS.ID sale del
+     * S10b 7.3: un ESTUDIANTE solo opera sobre su propia matricula: su ALUMNOS.ID sale del
      * claim alumno_id del token ya validado, nunca de un campo que el cliente pueda cambiar.
      * COORDINADOR / ADMIN no tienen esa restriccion (estudianteRestringido devuelve null).
      */
@@ -56,7 +56,7 @@ public class MatriculaController {
     }
 
     /**
-     * [U2] Contexto academico (escuela, habilitacion) para la inscripcion. El ESTUDIANTE solo obtiene
+     * Contexto academico (escuela, habilitacion) para la inscripcion. El ESTUDIANTE solo obtiene
      * el suyo: si no envia estudianteId se usa el del token y pedir el de otro alumno es un 403.
      * El personal debe indicar el alumno.
      */

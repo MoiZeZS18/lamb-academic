@@ -56,9 +56,7 @@ export interface ClasificacionPeriodo {
   consistentes: Matricula[];
   revision: { matricula: Matricula; motivos: string[] }[];
   anuladas: Matricula[];
-  /** Inscripciones a cursos (detalles) de las matriculas consistentes. */
   inscripcionesConsistentes: number;
-  /** Inscripciones a cursos de las matriculas que requieren revision. */
   inscripcionesRevision: number;
 }
 

@@ -42,7 +42,6 @@ interface ResumenPeriodo {
   consistentes: number;
   revision: number;
   anuladas: number;
-  /** Inscripciones a cursos (detalles) de las matriculas consistentes. */
   cursosConsistentes: number;
 }
 
@@ -93,7 +92,6 @@ export class PortalMatricula implements OnInit {
   protected readonly secciones = signal<Seccion[]>([]);
   protected readonly cursos = signal<Map<number, Curso>>(new Map());
   protected readonly resumen = signal<ResumenPeriodo | null>(null);
-  /** Plan vigente de la escuela del estudiante (para ubicar sus cursos por ciclo). */
   protected readonly plan = signal<PlanEstudio | null>(null);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
@@ -145,7 +143,6 @@ export class PortalMatricula implements OnInit {
     (this.cargo()?.cuotas ?? []).reduce((total, cuota) => total + cuota.montoPagado, 0),
   );
 
-  /** Oferta del periodo calculada sobre las secciones reales devueltas por la API. */
   protected readonly oferta = computed(() => {
     const vigentes = this.secciones().filter((s) => s.estado !== 'CANCELADA');
     return {
@@ -218,7 +215,6 @@ export class PortalMatricula implements OnInit {
     });
   }
 
-  /** Escuela del estudiante (su contexto) y el plan vigente de esa escuela; informativo. */
   private cargarPlan(): void {
     this.matriculaService
       .contexto()

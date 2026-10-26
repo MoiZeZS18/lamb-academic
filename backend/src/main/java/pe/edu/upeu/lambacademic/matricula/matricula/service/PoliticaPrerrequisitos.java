@@ -11,6 +11,5 @@ public enum PoliticaPrerrequisitos {
      * (excluye DESAPROBADO y RETIRADO). Solo para transicion mientras se cargan resultados.
      */
     CURSADO_TEMPORAL,
-    /** No valida prerrequisitos. */
     NINGUNA
 }

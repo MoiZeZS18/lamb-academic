@@ -11,10 +11,8 @@ import {
 import { ROLES_COORDINACION, ROLES_MATRICULA } from '../auth/roles';
 
 /**
- * Menu lateral declarativo (patron reutilizado de Cristian, core/menu.ts). `roles` repite las
- * mismas reglas de las rutas (app.routes.ts): el menu es UX, no seguridad. Periodos y Secciones
- * se leen con cualquier sesion en SecurityConfig (la inscripcion los necesita), pero sus pantallas
- * de gestion son de coordinacion. Sin `roles`: cualquier usuario con sesion.
+ * Menu lateral declarativo (patron reutilizado de Cristian). `roles` repite las reglas de
+ * app.routes.ts: el menu es UX, no seguridad. Sin `roles`: cualquier usuario con sesion.
  */
 export interface ItemMenu {
   etiqueta: string;

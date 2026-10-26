@@ -35,14 +35,9 @@ interface LineaValor {
 }
 
 /**
- * Inscripcion (pantallas B y C): oferta del periodo activo y formulario cabecera-detalle (S9).
- *
- * - Cabecera: alumno (el del token para ESTUDIANTE; a elegir para coordinacion), periodo activo,
- *   fecha de hoy y cuotas del cargo.
- * - Detalle: FormArray de lineas {curso, seccion}; se agregan desde la oferta o con "Agregar curso".
- * - Validaciones visuales: al menos una linea, curso y seccion repetidos, seccion no abierta o sin
- *   vacantes, cruces de horario y prerrequisitos informados. El backend valida todo otra vez.
- * - Se envia UNA sola peticion; el cargo lo genera el backend en la misma transaccion.
+ * Inscripcion (pantallas B y C, S9): cabecera con el alumno (el del token para ESTUDIANTE) y un
+ * FormArray de lineas {curso, seccion}. Las validaciones de la SPA son una ayuda: el backend vuelve
+ * a validar todo y genera el cargo en la misma transaccion, con UNA sola peticion.
  */
 @Component({
   selector: 'app-matricula-form',
@@ -94,7 +89,6 @@ export class MatriculaForm implements OnInit {
 
   protected readonly busqueda = signal('');
   protected readonly soloDisponibles = signal(true);
-  /** Coordinacion: texto para filtrar la lista de alumnos (codigo, nombre o documento). */
   protected readonly busquedaAlumno = signal('');
 
   /** ESTUDIANTE sin rol de personal: matricula solo a si mismo (el backend lo exige igual). */
@@ -130,19 +124,16 @@ export class MatriculaForm implements OnInit {
 
   private readonly seccionPorId = computed(() => new Map(this.secciones().map((s) => [s.id, s])));
 
-  /** Cursos con al menos una seccion en el periodo, ordenados por codigo. */
   protected readonly cursosOfertados = computed(() => {
     const cursos = new Map<number, CursoResumen>();
     for (const s of this.secciones()) cursos.set(s.curso.id, s.curso);
     return [...cursos.values()].sort((a, b) => a.codigo.localeCompare(b.codigo));
   });
 
-  /** Ubicacion de cada curso en el plan vigente del alumno (ciclo, tipo, prerrequisito). */
   protected readonly planPorCurso = computed(
     () => new Map((this.plan()?.detalles ?? []).map((d): [number, DetallePlan] => [d.idCurso, d])),
   );
 
-  /** Ciclos del plan que tienen secciones en la oferta del periodo. */
   protected readonly ciclosOfertados = computed(() =>
     [...new Set(this.secciones().map((s) => this.planPorCurso().get(s.curso.id)?.ciclo))]
       .filter((c): c is number => c !== undefined)
@@ -162,7 +153,6 @@ export class MatriculaForm implements OnInit {
       .sort((a, b) => orden(a) - orden(b) || a.curso.codigo.localeCompare(b.curso.codigo) || a.grupo.localeCompare(b.grupo));
   });
 
-  /** Secciones elegidas (lineas con seccion valida), en el orden del formulario. */
   protected readonly elegidas = computed(() =>
     (this.valoresDetalles() as LineaValor[])
       .map((l) => this.seccionPorId().get(l.seccionId))
@@ -378,7 +368,6 @@ export class MatriculaForm implements OnInit {
     return this.prerrequisitos().get(cursoId) ?? [];
   }
 
-  /** Coordinacion: al elegir alumno se verifica si ya tiene matricula vigente en el periodo. */
   protected cambiarAlumno(): void {
     this.existente.set(null);
     const estudianteId = this.form.controls.estudianteId.value;

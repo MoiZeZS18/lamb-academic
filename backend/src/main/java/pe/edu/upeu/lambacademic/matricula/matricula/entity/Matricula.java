@@ -42,7 +42,7 @@ public class Matricula {
     @Column(name = "ESTADO", nullable = false, length = 20)
     private String estado;
 
-    /** Suma de creditos de los detalles (integracion). NULL en matriculas previas. */
+    /** Suma de creditos de los detalles; NULL en matriculas previas a la integracion. */
     @Column(name = "TOTAL_CREDITOS")
     private Integer totalCreditos;
 
@@ -57,7 +57,7 @@ public class Matricula {
     @Column(name = "FECHA_ANULACION")
     private LocalDateTime fechaAnulacion;
 
-    /** Lotes de carga de detalles: permite paginar en Oracle sin JOIN FETCH (integracion). */
+    /** Lotes de carga de detalles: permite paginar en Oracle sin JOIN FETCH. */
     @BatchSize(size = 50)
     @OneToMany(
             mappedBy = "matricula",
